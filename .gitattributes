@@ -1,0 +1,3 @@
+# Authenticode signatures cover the exact script bytes; never normalize line endings.
+*.ps1 -text
+*.psd1 -text
