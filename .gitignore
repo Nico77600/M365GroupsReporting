@@ -1,0 +1,7 @@
+app_creds.json
+run_*/
+*.sqlite
+*.sqlite-journal
+*.sqlite.lock
+engine/bin/
+engine/obj/
