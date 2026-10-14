@@ -1,0 +1,391 @@
+<!doctype html>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>M365GroupsReporting - Administrator guide</title>
+<script>
+  (() => {
+    const param = new URLSearchParams(window.location.search).get("scoutTheme");
+    const theme = param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    document.documentElement.setAttribute("data-theme", theme);
+  })();
+</script>
+<style>
+:root {
+  color-scheme: light;
+  --cp-bg: #f7f4ef; --cp-bg-elevated: #fcfbf8; --cp-surface: #ffffff; --cp-surface-soft: #f5f5f5;
+  --cp-border: #dedede; --cp-border-strong: #919191; --cp-text: #242424; --cp-text-muted: #5c5c5c; --cp-text-soft: #6f6f6f;
+  --cp-accent: #b11f4b; --cp-accent-hover: #9a1a41; --cp-accent-soft: rgba(177, 31, 75, 0.08); --cp-accent-fg: #ffffff;
+  --cp-success: #16a34a; --cp-danger: #dc2626; --cp-warning: #f59e0b; --cp-link: #0078d4;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12); --cp-overlay: rgba(255, 255, 255, 0.8);
+  --cp-panel: rgba(255, 255, 255, 0.86); --cp-panel-strong: rgba(255, 255, 255, 0.96); --cp-sheen: rgba(255, 255, 255, 0.55);
+  --cp-highlight: rgba(177, 31, 75, 0.12);
+}
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --cp-bg: #3d3b3a; --cp-bg-elevated: #343231; --cp-surface: #292929; --cp-surface-soft: #2e2e2e;
+  --cp-border: #474747; --cp-border-strong: #5f5f5f; --cp-text: #dedede; --cp-text-muted: #919191; --cp-text-soft: #b0b0b0;
+  --cp-accent: #fd8ea1; --cp-accent-hover: #fb7b91; --cp-accent-soft: rgba(253, 142, 161, 0.14); --cp-accent-fg: #1a1a1a;
+  --cp-success: #4ade80; --cp-danger: #f87171; --cp-warning: #fbbf24; --cp-link: #4da6ff;
+  --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32); --cp-overlay: rgba(41, 41, 41, 0.88);
+  --cp-panel: rgba(41, 41, 41, 0.72); --cp-panel-strong: rgba(41, 41, 41, 0.96); --cp-sheen: rgba(255, 255, 255, 0.04);
+  --cp-highlight: rgba(253, 142, 161, 0.12);
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 24px; }
+body { margin: 0; background: var(--cp-bg); color: var(--cp-text); font: 15.5px/1.7 "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; display: grid; grid-template-columns: 300px minmax(0, 1fr); }
+a { color: var(--cp-link); text-decoration: none; } a:hover { text-decoration: underline; }
+.icon { width: 22px; height: 22px; } .icon-sm { width: 16px; height: 16px; flex-shrink: 0; } .icon-xs { width: 12px; height: 12px; }
+button { font: inherit; color: var(--cp-text); background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 0.625rem; cursor: pointer; }
+button:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 2px; }
+
+/* ---- Sidebar -------------------------------------------------------------------- */
+aside { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--cp-bg-elevated); border-right: 1px solid var(--cp-border); padding: 24px 16px 32px; }
+.brand { display: flex; gap: 12px; align-items: center; padding: 4px 8px 20px; border-bottom: 1px solid var(--cp-border); margin-bottom: 12px; }
+.brand-logo { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--cp-accent); color: var(--cp-accent-fg); }
+.brand-name { font-weight: 700; font-size: 15px; line-height: 1.2; } .brand-sub { font-size: 12px; color: var(--cp-text-muted); }
+.nav-part { margin: 20px 8px 6px; font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--cp-accent); }
+.nav-part span { color: var(--cp-text-muted); font-weight: 600; letter-spacing: 0.04em; }
+aside a { display: flex; align-items: center; gap: 10px; padding: 6px 8px; margin: 1px 0; border-radius: 0.625rem; color: var(--cp-text); font-size: 13.5px; line-height: 1.35; border-left: 3px solid transparent; }
+aside a:hover { background: var(--cp-accent-soft); text-decoration: none; }
+aside a.active { background: var(--cp-accent-soft); border-left-color: var(--cp-accent); font-weight: 600; }
+.nav-badge { flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-size: 11.5px; font-weight: 700; background: var(--cp-surface-soft); color: var(--cp-text-muted); border: 1px solid var(--cp-border); }
+aside a.active .nav-badge { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); }
+
+/* ---- Main -------------------------------------------------------------------------- */
+main { padding: 40px 56px 80px; max-width: 1080px; width: 100%; }
+.hero { position: relative; overflow: hidden; border: 1px solid var(--cp-border); border-top: 4px solid var(--cp-accent); border-radius: 16px; padding: 36px 40px 32px; margin-bottom: 40px; background: linear-gradient(125deg, var(--cp-surface) 40%, var(--cp-accent-soft)); }
+.hero::before { content: ""; position: absolute; width: 320px; height: 320px; right: -110px; top: -170px; border: 44px solid var(--cp-highlight); border-radius: 50%; pointer-events: none; }
+.hero-top { position: relative; display: flex; align-items: center; gap: 18px; }
+.hero-logo { width: 60px; height: 60px; border-radius: 16px; display: grid; place-items: center; background: var(--cp-accent); color: var(--cp-accent-fg); flex-shrink: 0; }
+.hero-logo .icon { width: 32px; height: 32px; }
+.eyebrow, .section-eyebrow { font-size: 11.5px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-accent); }
+.hero h1 { font-size: 38px; font-weight: 700; letter-spacing: -0.025em; line-height: 1.1; margin: 4px 0 0; }
+#theme { margin-left: auto; padding: 8px 10px; display: grid; place-items: center; }
+.badges { position: relative; display: flex; flex-wrap: wrap; gap: 8px; margin: 22px 0 18px; }
+.badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; font-size: 12.5px; background: var(--cp-surface); border: 1px solid var(--cp-border); color: var(--cp-text-muted); }
+.badge-accent { background: var(--cp-accent); color: var(--cp-accent-fg); border-color: var(--cp-accent); font-weight: 600; }
+.lead { position: relative; font-size: 17.5px; line-height: 1.6; max-width: 760px; margin: 0 0 24px; }
+
+.part { display: flex; align-items: baseline; gap: 14px; margin: 56px 0 20px; padding-bottom: 10px; border-bottom: 2px solid var(--cp-accent); }
+.part-label { font-size: 13px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--cp-accent); }
+.part-name { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; }
+
+.section { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 16px; padding: 32px 40px 28px; margin: 0 0 28px; box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14); }
+.section-head { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; margin-bottom: 8px; border-bottom: 1px solid var(--cp-border); }
+.section-icon { width: 48px; height: 48px; border-radius: 14px; display: grid; place-items: center; background: var(--cp-accent-soft); color: var(--cp-accent); flex-shrink: 0; }
+.section-icon .icon { width: 26px; height: 26px; }
+.section h2 { font-size: 25px; font-weight: 700; letter-spacing: -0.02em; margin: 2px 0 0; line-height: 1.2; }
+.section-body > :first-child { margin-top: 16px; }
+h3 { font-size: 17.5px; font-weight: 650; margin: 36px 0 12px; padding-left: 12px; border-left: 3px solid var(--cp-accent); line-height: 1.3; }
+p { margin: 12px 0; } ul, ol { padding-left: 22px; } li { margin: 6px 0; } li::marker { color: var(--cp-accent); }
+strong { font-weight: 650; }
+code { font-family: Consolas, "Courier New", Courier, monospace; font-size: 0.88em; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); padding: 1px 6px; border-radius: 6px; }
+kbd { font-family: Consolas, monospace; font-size: 0.85em; padding: 1px 7px; border: 1px solid var(--cp-border-strong); border-bottom-width: 2px; border-radius: 6px; background: var(--cp-surface-soft); }
+hr { border: 0; border-top: 1px solid var(--cp-border); margin: 28px 0; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; margin: 16px 0 20px; border: 1px solid var(--cp-border); border-radius: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 14px; line-height: 1.55; }
+th { text-align: left; font-weight: 650; font-size: 12.5px; letter-spacing: 0.02em; color: var(--cp-text-muted); background: var(--cp-surface-soft); padding: 11px 16px; border-bottom: 1px solid var(--cp-border); }
+td { padding: 11px 16px; border-bottom: 1px solid var(--cp-border); vertical-align: top; }
+td:first-child { font-weight: 600; }
+tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--cp-accent-soft); }
+td code { white-space: nowrap; }
+
+/* Code */
+.code { margin: 16px 0 20px; border: 1px solid var(--cp-border); border-radius: 12px; overflow: hidden; background: var(--cp-surface-soft); }
+.code-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px 6px 16px; border-bottom: 1px solid var(--cp-border); font-size: 12px; font-weight: 600; color: var(--cp-text-muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.copy { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; font-size: 12px; text-transform: none; letter-spacing: 0; }
+.copy.done { color: var(--cp-success); border-color: var(--cp-success); }
+.code pre { margin: 0; padding: 16px 18px; overflow-x: auto; font-size: 13.5px; line-height: 1.6; }
+.code pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+
+/* Callouts */
+.markdown-alert { --tone: var(--cp-link); margin: 18px 0; padding: 14px 18px; border: 1px solid color-mix(in srgb, var(--tone) 35%, var(--cp-border)); border-left: 4px solid var(--tone); border-radius: 12px; background: color-mix(in srgb, var(--tone) 7%, var(--cp-surface)); }
+.markdown-alert p { margin: 6px 0; }
+.markdown-alert-title { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--tone); margin: 0 0 4px !important; }
+.markdown-alert-tip { --tone: var(--cp-success); } .markdown-alert-important { --tone: var(--cp-accent); }
+.markdown-alert-warning { --tone: var(--cp-warning); } .markdown-alert-caution { --tone: var(--cp-danger); }
+
+/* Cards */
+.cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin: 18px 0 22px; position: relative; }
+.card-item { display: flex; gap: 14px; padding: 16px 18px; border: 1px solid var(--cp-border); border-radius: 14px; background: var(--cp-surface); transition: transform 160ms ease, border-color 160ms ease; }
+.card-item:hover { transform: translateY(-2px); border-color: var(--cp-accent); }
+.card-icon { width: 38px; height: 38px; border-radius: 11px; display: grid; place-items: center; background: var(--cp-accent-soft); color: var(--cp-accent); flex-shrink: 0; }
+.card-title { font-weight: 700; font-size: 14.5px; line-height: 1.3; margin: 2px 0 4px; }
+.card-text { font-size: 13.5px; line-height: 1.5; color: var(--cp-text-muted); }
+
+/* Steps */
+.steps { list-style: none; padding: 0; margin: 18px 0 22px; position: relative; }
+.steps li { position: relative; display: flex; gap: 16px; margin: 0; padding: 0 0 18px; }
+.steps li:not(:last-child)::before { content: ""; position: absolute; left: 16px; top: 36px; bottom: 2px; width: 2px; background: var(--cp-border); }
+.step-num { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; font-size: 14px; background: var(--cp-accent); color: var(--cp-accent-fg); box-shadow: 0 0 0 4px var(--cp-accent-soft); }
+.step-body { padding-top: 5px; } .step-title { font-weight: 700; font-size: 15px; line-height: 1.35; }
+.step-text { color: var(--cp-text-muted); font-size: 14.5px; margin-top: 2px; }
+
+/* Flow */
+.flow { display: flex; align-items: stretch; flex-wrap: wrap; gap: 6px; margin: 20px 0 24px; padding: 20px; border-radius: 14px; background: var(--cp-surface-soft); border: 1px dashed var(--cp-border-strong); }
+.flow-node { flex: 1 1 130px; min-width: 120px; text-align: center; padding: 16px 12px; border-radius: 12px; background: var(--cp-surface); border: 1px solid var(--cp-border); }
+.flow-icon { width: 42px; height: 42px; margin: 0 auto 8px; border-radius: 12px; display: grid; place-items: center; background: var(--cp-accent-soft); color: var(--cp-accent); }
+.flow-title { font-weight: 700; font-size: 14px; line-height: 1.3; } .flow-text { font-size: 12.5px; color: var(--cp-text-muted); line-height: 1.4; margin-top: 4px; }
+.flow-arrow { flex: 0 0 auto; min-width: 70px; display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--cp-border-strong); padding: 0 2px; }
+.flow-arrow svg { width: 44px; height: 14px; color: var(--cp-accent); }
+.flow-label { font-size: 12px; font-weight: 700; color: var(--cp-accent); } .flow-sub { font-size: 11px; color: var(--cp-text-muted); text-align: center; max-width: 110px; line-height: 1.3; }
+
+/* Figures */
+figure { margin: 18px 0 24px; }
+figure img { display: block; max-width: 100%; border: 1px solid var(--cp-border); border-radius: 12px; box-shadow: 0 0 2px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.14); cursor: zoom-in; }
+figcaption { font-size: 13px; color: var(--cp-text-muted); margin-top: 8px; text-align: center; }
+dialog#zoom { border: 0; padding: 0; background: transparent; max-width: 96vw; max-height: 96vh; }
+dialog#zoom::backdrop { background: rgba(0, 0, 0, 0.7); }
+dialog#zoom img { max-width: 96vw; max-height: 94vh; border-radius: 12px; cursor: zoom-out; display: block; }
+
+#to-top { position: fixed; right: 24px; bottom: 24px; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--cp-accent); color: var(--cp-accent-fg); border: 0; box-shadow: var(--cp-shadow); opacity: 0; pointer-events: none; transition: opacity 200ms; }
+#to-top.visible { opacity: 1; pointer-events: auto; } #to-top:hover { background: var(--cp-accent-hover); color: var(--cp-accent-fg); }
+footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--cp-border); font-size: 12.5px; color: var(--cp-text-muted); text-align: center; }
+
+@media (max-width: 1000px) {
+  body { display: block; }
+  aside { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--cp-border); }
+  main { padding: 24px 16px 60px; } .section { padding: 24px 20px; } .hero { padding: 28px 22px; }
+}
+@media print {
+  body { display: block; background: #fff; } aside, #to-top, #theme, .copy { display: none !important; }
+  main { padding: 0; max-width: none; } .section { break-inside: avoid-page; box-shadow: none; } .part { break-before: page; }
+}
+</style></head><body>
+<aside><div class="brand"><div class="brand-logo"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div><div><div class="brand-name">M365GroupsReporting</div><div class="brand-sub">Administrator guide · v1.0.0</div></div></div>
+<nav aria-label="Contents"><a href="#installation-and-quick-start" data-target="installation-and-quick-start"><span class="nav-badge">1</span><span class="nav-text">Installation and quick start</span></a><a href="#configuration-and-paths" data-target="configuration-and-paths"><span class="nav-badge">2</span><span class="nav-text">Configuration and paths</span></a><a href="#authentication-and-permissions" data-target="authentication-and-permissions"><span class="nav-badge">3</span><span class="nav-text">Authentication and permissions</span></a><a href="#collection-resume-and-retention" data-target="collection-resume-and-retention"><span class="nav-badge">4</span><span class="nav-text">Collection, resume and retention</span></a><a href="#csv-and-html" data-target="csv-and-html"><span class="nav-badge">5</span><span class="nav-text">CSV and HTML</span></a><a href="#development-and-validation" data-target="development-and-validation"><span class="nav-badge">6</span><span class="nav-text">Development and validation</span></a><a href="#safe-delivery-and-remaining-qualifications" data-target="safe-delivery-and-remaining-qualifications"><span class="nav-badge">7</span><span class="nav-text">Safe delivery and remaining qualifications</span></a></nav></aside>
+<main><header class="hero" id="top"><div class="hero-top"><div class="hero-logo"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div><div><div class="eyebrow">Administrator guide</div><h1>M365GroupsReporting</h1></div><button type="button" id="theme" class="ghost" title="Light / dark"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></button></div><div class="badges"><span class="badge badge-accent">Version 1.0.0</span><span class="badge"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Updated 2026-10-14</span><span class="badge"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Nicolas Fabert</span><span class="badge"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg>PowerShell 7.4+</span><span class="badge"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>Read-only for Microsoft 365</span></div><p class="lead">A complete, fail-closed inventory of Microsoft 365 groups, owners, members and SharePoint site URLs.</p>
+<div class="cards"><div class="card-item"><div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div><div><div class="card-title">Durable snapshots</div><div class="card-text">SQLite checkpoints, one bounded writer, reconciliation before sealing.</div></div></div><div class="card-item"><div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16v-5M11 16V6M16 16v-8"/></svg></div><div><div class="card-title">Self-contained reports</div><div class="card-text">CSV and a single HTML file with complete relations, filters and a virtualized grid.</div></div></div><div class="card-item"><div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div><div><div class="card-title">External credentials</div><div class="card-text">Explicit authentication modes; secrets never enter the engine or package.</div></div></div></div>
+</header><section class="section" id="installation-and-quick-start"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg></div><div><div class="section-eyebrow">Chapter 1</div><h2>Installation and quick start</h2></div></div><div class="section-body">
+<p>Use PowerShell 7.4+ on Windows x64 or arm64. The delivery package contains a compiled .NET 8 engine
+and SQLite dependencies under <code>lib\engine</code>; no SDK or download is needed to run it.
+Developers need an installed .NET SDK plus the .NET 8 targeting pack or runtime to build offline.</p>
+<div class="code"><div class="code-head"><span>PowerShell</span><button type="button" class="copy"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy</span></button></div><pre><code>.\Build-Engine.ps1                       # Development only
+.\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv
+.\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv -Format HTML
+.\Invoke-M365GroupsReporting.ps1 -ResumeRun .\data\run_20260101_120000 -OverwriteExport
+Get-Help .\Invoke-M365GroupsReporting.ps1 -Full
+</code></pre></div>
+<p>The default configuration produces CSV and HTML. <code>-Format CSV</code> or <code>-Format HTML</code> overrides it.
+A valid SharePoint <code>GroupId,Url</code> source is required for a new run; an empty source fails closed.
+<code>Get-SiteUrls.ps1</code> collects <code>GROUP#0</code> sites. Its interactive SharePoint route requires Windows
+PowerShell 5.1 and <code>Microsoft.Online.SharePoint.PowerShell</code>, modern authentication and an admin URL.
+It remains unqualified outside the existing lab; a prepared site CSV is the recommended route.</p>
+</div></section><section class="section" id="configuration-and-paths"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></div><div><div class="section-eyebrow">Chapter 2</div><h2>Configuration and paths</h2></div></div><div class="section-body">
+<p>Edit <code>config\M365GroupsReporting.config.psd1</code>. Like the actual PurviewDlpReport importer,
+all relative paths are resolved from the <strong>tool root</strong>, even for a configuration elsewhere.
+Environment variables in path values are expanded. Command-line overrides are preserved.
+Configuration is validated before creating a run.</p>
+<div class="table-wrap"><table>
+<thead>
+<tr>
+<th>Setting</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Storage.DatabasePath</code></td>
+<td>Snapshot base directory and database filename; default <code>.\data\M365GroupsReporting.sqlite</code></td>
+</tr>
+<tr>
+<td><code>Storage.RetentionDays</code></td>
+<td>Age of older sealed snapshots eligible for removal; zero keeps all</td>
+</tr>
+<tr>
+<td><code>Storage.KeepIncompleteRuns</code></td>
+<td>Incomplete/unknown/corrupt snapshots are always preserved for safety</td>
+</tr>
+<tr>
+<td><code>Logging.Path</code>, <code>RetentionDays</code></td>
+<td>Independent log root and file-age retention; zero keeps all</td>
+</tr>
+<tr>
+<td><code>Report.OutputPath</code></td>
+<td>Report root; one <code>run_&lt;timestamp&gt;</code> subdirectory per snapshot</td>
+</tr>
+<tr>
+<td><code>Report.Formats</code></td>
+<td><code>@('CSV','HTML')</code>; use either or both</td>
+</tr>
+<tr>
+<td><code>Report.FilePrefix</code></td>
+<td><code>M365GroupsReporting</code>; must be a valid filename part</td>
+</tr>
+<tr>
+<td><code>Report.CsvDelimiter</code></td>
+<td>Semicolon by default; comma, pipe and tab also supported</td>
+</tr>
+<tr>
+<td><code>Report.TimeZone</code></td>
+<td><code>Europe/Paris</code>; report seal time rendered in this zone</td>
+</tr>
+<tr>
+<td><code>Report.Title</code>, <code>CompanyName</code></td>
+<td>Report heading and optional company branding</td>
+</tr>
+<tr>
+<td><code>Report.ShowTenantInformation</code></td>
+<td>False by default; opt-in tenant and environment display</td>
+</tr>
+<tr>
+<td><code>Report.EnvironmentName</code></td>
+<td>Optional label shown only when tenant display is enabled</td>
+</tr>
+<tr>
+<td><code>Collection.ThrottleLimit</code>, <code>MaxGroups</code>, <code>SkipMembers</code></td>
+<td>Concurrency, deliberate sample limit and member collection</td>
+</tr>
+<tr>
+<td><code>Report.HtmlPartitioned</code>, <code>HtmlRowsPerPart</code>, <code>HtmlMaxRelations</code></td>
+<td>Legacy partitioning, part size and preview length only</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Accepted domain difference:</strong> inventory runs are immutable full snapshots, not Purview's incrementally
+updated event-history database. <code>Storage.DatabasePath</code> therefore yields
+<code>&lt;database parent&gt;\run_&lt;stamp&gt;\&lt;database filename&gt;</code> for each new run; it never overwrites a snapshot.
+<code>-DatabasePath</code> overrides that prototype. <code>-ResumeRun</code> accepts the actual database or its folder;
+legacy <code>inventory.sqlite</code> runs remain supported.</p>
+<p><code>-WorkDir</code> is a compatibility override: it places snapshots, reports and logs together in
+<code>&lt;WorkDir&gt;\run_&lt;stamp&gt;</code>. Explicit <code>-DatabasePath</code>, <code>-OutputPath</code> and <code>-LogPath</code> take precedence for
+their corresponding paths. <code>-OutName</code> overrides <code>FilePrefix</code>. The former config-relative paths,
+<code>Storage.WorkDirectory</code>, <code>Report.Format</code> and <code>Report.OutputName</code> are migrated to the explicit keys.
+Do not use the removed keys in a custom configuration.</p>
+</div></section><section class="section" id="authentication-and-permissions"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="15" r="4"/><path d="m11 12 9-9M16 7l3 3"/></svg></div><div><div class="section-eyebrow">Chapter 3</div><h2>Authentication and permissions</h2></div></div><div class="section-body">
+<p>Choose <code>Authentication.Mode</code> (or <code>-AuthMode</code>) explicitly:</p>
+<ul>
+<li><strong>Certificate (preferred):</strong> configure <code>Tenant.TenantId</code>, <code>Authentication.AppId</code> and
+<code>CertificateThumbprint</code>. The certificate must be currently valid and contain an RSA private key
+in <code>Cert:\CurrentUser\My</code> or <code>Cert:\LocalMachine\My</code>; register its matching public certificate
+on that App Registration. A certificate from another app cannot authenticate this AppId.
+JWT assertions expire after five minutes. No secret or private key is placed on the command line or exported.</li>
+<li><strong>ClientSecretFile:</strong> the compatibility/lab mode, with an external protected JSON file containing
+<code>TenantId</code>, <code>ClientId</code> and <code>ClientSecret</code>. <code>Authentication.CredentialsPath</code> or <code>-CredFile</code> references
+the file; it is never copied into runs, packages or the engine. Protect it with user-only NTFS ACLs.
+Configured tenant/application identities must match the file.</li>
+<li><strong>ClientSecretEnvironment:</strong> another compatibility/lab mode; configure tenant/application IDs and an environment variable named by
+<code>Authentication.SecretEnvironmentVariable</code> (default <code>M365_GROUPS_CLIENT_SECRET</code>). Provision it through
+a protected process environment, not through a literal command in shell history.</li>
+</ul>
+<p>After token acquisition, a snapshot is bound to its authenticated collection tenant. Another tenant
+is rejected on collection/resume and offline reporting. Existing legacy snapshots remain compatible:
+unbound offline reports label tenant information as configuration-only, and first authenticated
+binding of a legacy snapshot retains an explicit historical-attribution warning. Tenant IDs are
+nonsecret provenance metadata; app secrets and access tokens are never stored.</p>
+<p><strong>Accepted domain difference:</strong> Graph app-only inventory is not Security &amp; Compliance PowerShell.
+Purview's <code>Interactive</code>/<code>Certificate</code> IPPS model cannot be reused verbatim. Certificate is preferred;
+the explicit external-secret modes and default file configuration preserve the existing Graph lab path.
+The app needs admin-consented Graph application permissions for groups and their owners/members
+(normally <code>Group.Read.All</code> and <code>User.Read.All</code>, or equivalent least-privilege permissions validated
+for the directory object types actually returned). SharePoint collection uses its own delegated admin sign-in.</p>
+<p><code>-ClientSecret</code> is deprecated compatibility only. It disables the transcript so the invocation cannot
+be captured; fixed lifecycle diagnostics are still written. Do not use it for scheduled tasks.
+OAuth response bodies and malformed credentials-file details are suppressed. Credentials and tokens
+are cleared from script variables at cleanup; the engine receives no authentication material.
+Caller-owned transcripts, shell history, process arguments and debug traces are outside the tool's control.</p>
+</div></section><section class="section" id="collection-resume-and-retention"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="7" height="5" rx="1.5"/><rect x="14" y="15" width="7" height="5" rx="1.5"/><path d="M6.5 9v4a2 2 0 0 0 2 2H14"/></svg></div><div><div class="section-eyebrow">Chapter 4</div><h2>Collection, resume and retention</h2></div></div><div class="section-body">
+<ol class="steps"><li><span class="step-num">1</span><div class="step-body"><div class="step-title">Stage sites</div><div class="step-text">Stream the SharePoint CSV; reject an empty or malformed source.</div></div></li><li><span class="step-num">2</span><div class="step-body"><div class="step-title">Enumerate groups</div><div class="step-text">Checkpoint each Graph page; resume from its cursor or restart with de-duplication.</div></div></li><li><span class="step-num">3</span><div class="step-body"><div class="step-title">Collect lists</div><div class="step-text">Parallel Graph batches feed one bounded SQLite writer; retry throttling and authentication.</div></div></li><li><span class="step-num">4</span><div class="step-body"><div class="step-title">Reconcile and seal</div><div class="step-text">Require every source/list and stored count to reconcile before any final export.</div></div></li><li><span class="step-num">5</span><div class="step-body"><div class="step-title">Export and retain</div><div class="step-text">Atomically promote verified files; close engine/transcript, then apply retention after success.</div></div></li></ol>
+<p>HTTP 404 is a confirmed delete only after a direct group re-check. Failed or interrupted lists are
+not reported as empty. <code>-SkipMembers</code> produces an uncollected/null member count, never a false zero.
+Resume keeps completed lists; interrupted lists restart from their first page.
+A sealed run is re-exported without credentials. Existing exports require <code>-OverwriteExport</code>.</p>
+<p>Retention uses validated SQLite <strong>sealed state and seal time</strong>, not export filenames or directory
+timestamps. It never deletes active/locked, incomplete, unreadable, corrupt or reparse-point runs.
+It preserves the latest completed snapshot even when idle beyond retention. The current execution
+is excluded. A second exclusive writer-compatible lock is taken before removal.
+Logs are aged by each <code>.log</code> file's timestamp, not folder age; active logs and incomplete-run logs are
+preserved. Log retention is independently callable/testable. <code>-NoRetention</code> skips both policies.
+Report directories have no implicit destructive retention; protect/delete exports deliberately.</p>
+</div></section><section class="section" id="csv-and-html"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16v-5M11 16V6M16 16v-8"/></svg></div><div><div class="section-eyebrow">Chapter 5</div><h2>CSV and HTML</h2></div></div><div class="section-body">
+<p>CSV contains 12 quoted fields, UTF-8 BOM, CRLF, configured delimiter and complete <code>;</code>-joined relation
+lists. Formula-shaped values are neutralized unless <code>-RawCsvValues</code> is deliberately selected.
+HTML filtered CSV obeys the same delimiter/guard, column order and relation representation.
+Treat all snapshots and exports as tenant data.</p>
+<p>HTML is one self-contained file by default. Gzip/base64 chunks are decoded progressively with
+<code>DecompressionStream</code>; no external script, font, image or network call is required.
+Chunk-local relation dictionaries are merged into browser-global dictionaries; typed filter masks
+avoid lowercasing every repeated owner/member for every filter pass.
+Display name, alias, SMTP, type, site URL, visibility, owner, member, count and ownerless filters
+remain inventory-specific. The Purview theme's full variables, decorative header, metric icons,
+filtered summary, member-count distribution, top-ten ranking, filters card, grid, overlay, details
+dialog, focus and responsive styling are retained. Uncollected member counts are excluded from rankings.
+<code>-HtmlMaxRelations</code> limits only the preview; complete relations remain filterable and exportable.
+Only viewport rows appear in the DOM. <code>-HtmlPartitioned</code> opts into the legacy multi-file layout.</p>
+</div></section><section class="section" id="development-and-validation"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 3h6M10 3v6L4.5 18.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7 15h10"/></svg></div><div><div class="section-eyebrow">Chapter 6</div><h2>Development and validation</h2></div></div><div class="section-body">
+<p>Canonical engine sources live in <code>src</code>, tests in <code>tests</code>, configuration in <code>config</code>, template in
+<code>templates</code>, and documentation/packaging helpers in <code>tools</code>. Root PowerShell entry points and root
+Pester files are compatibility entry points. <code>engine\GroupInventory.Engine.csproj</code> and <code>engine\bin</code>
+remain the existing offline development build path; packages relocate the compiled runtime to
+<code>lib\engine</code> and exclude every <code>bin</code> directory.</p>
+<div class="code"><div class="code-head"><span>PowerShell</span><button type="button" class="copy"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy</span></button></div><pre><code>.\Build-Engine.ps1
+Invoke-Pester -Path .\tests\Invoke-M365GroupsReporting.Tests.ps1,.\tests\GroupInventory.Engine.Tests.ps1,.\tests\M365GroupsReporting.Parity.Tests.ps1
+$env:GROUP_INVENTORY_BENCH_OBJECTS = 400000
+Invoke-Pester -Path .\tests\GroupInventory.Engine.Tests.ps1
+.\tools\Build-Documentation.ps1
+.\tools\New-GroupInventoryPackage.ps1 -Destination C:\Scripts\package\M365GroupsReporting-1.0.0
+</code></pre></div>
+<p>Tests are offline, synthetic and use existing Pester tooling. Never point validation at tenant runs.
+The large benchmark creates 20,000 groups, 40,000 owners and 340,000 members with 32 producers.</p>
+</div></section><section class="section" id="safe-delivery-and-remaining-qualifications"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div><div><div class="section-eyebrow">Chapter 7</div><h2>Safe delivery and remaining qualifications</h2></div></div><div class="section-body">
+<p>The package helper uses only allow-listed runtime files and includes this generated HTML guide and
+third-party notices. It sanitizes tenant IDs/domains, SharePoint URL, app/certificate identities,
+company/environment values, output/storage/log paths and branding. Tenant display resets to false.
+All text is scanned for original tenant/branding values, literal secrets, JWTs and private keys.
+The destination must be outside the source and not its ancestor; junction/symlink paths are refused.
+Executed destinations, databases, run/data/report/log/bin folders and unknown destinations cannot be
+replaced with <code>-Force</code>. Failed scanning does not change an existing package. Nothing is published.</p>
+<p>Certificate mode was live-qualified on 2026-10-14 using a dedicated registered RSA certificate with
+Client Authentication EKU and the existing SharePoint CSV source. The bounded sample sealed 100 groups
+with 200 complete owner/member lists, zero failed lists or reconciliation mismatches, and exported CSV
+and single-file HTML. The previous certificate credential, client secret, permissions/consent and
+historical full-run snapshot were preserved. The private key remains in the current user's certificate
+store; the lab override is outside the project/package.
+This does not qualify certificate mode at full-tenant scale; environment-secret mode still needs live qualification.
+The interactive SharePoint path remains lab-only; snapshot semantics and inventory-specific fields
+are accepted domain differences, not omissions of the Purview baseline.</p>
+</div></section>
+<footer>M365GroupsReporting 1.0.0 · Nicolas Fabert · generated 2026-10-14 13:42 from GroupInventory-Guide.md</footer></main>
+<button type="button" id="to-top" title="Back to top"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
+<dialog id="zoom"><img alt=""></dialog>
+<script>
+(() => {
+  "use strict";
+  // Theme toggle (no storage: the choice lasts for the page).
+  document.getElementById("theme").addEventListener("click", () => {
+    const root = document.documentElement;
+    root.setAttribute("data-theme", root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+  // Highlight the chapter being read in the sidebar.
+  const links = new Map(Array.from(document.querySelectorAll("aside a[data-target]")).map(a => [a.dataset.target, a]));
+  const observer = new IntersectionObserver(entries => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      links.forEach(a => a.classList.remove("active"));
+      const link = links.get(e.target.id);
+      if (link) { link.classList.add("active"); link.scrollIntoView({ block: "nearest" }); }
+    }
+  }, { rootMargin: "-20% 0px -70% 0px" });
+  document.querySelectorAll("section.section").forEach(s => observer.observe(s));
+  // Copy buttons.
+  document.querySelectorAll(".code .copy").forEach(button => button.addEventListener("click", async () => {
+    const text = button.closest(".code").querySelector("pre").innerText;
+    try { await navigator.clipboard.writeText(text); }
+    catch { const r = document.createRange(); r.selectNodeContents(button.closest(".code").querySelector("pre")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); document.execCommand("copy"); s.removeAllRanges(); }
+    const label = button.querySelector("span"); label.textContent = "Copied"; button.classList.add("done");
+    setTimeout(() => { label.textContent = "Copy"; button.classList.remove("done"); }, 1600);
+  }));
+  // Image zoom.
+  const zoom = document.getElementById("zoom");
+  document.querySelectorAll("figure img").forEach(img => img.addEventListener("click", () => { zoom.querySelector("img").src = img.src; zoom.showModal(); }));
+  zoom.addEventListener("click", () => zoom.close());
+  // Back to top.
+  const top = document.getElementById("to-top");
+  addEventListener("scroll", () => top.classList.toggle("visible", scrollY > 600), { passive: true });
+  top.addEventListener("click", () => scrollTo({ top: 0 }));
+})();
+</script>
+</body></html>
