@@ -6,6 +6,8 @@ Microsoft 365 (Unified) groups of a tenant. Sized for **at least 400,000 cumulat
 * **PowerShell** (`Invoke-M365GroupsReporting.ps1`) owns configuration, authentication and every Graph / SharePoint call.
 * **Configuration** (`config\M365GroupsReporting.config.psd1`) follows the PurviewDlpReport pattern: operational settings
   and retention are centralized; secrets remain external through explicit authentication modes.
+* **Integrity** (`M365GroupsReporting.PackageIntegrity.psd1`) records SHA-256 hashes for the public runtime,
+  source contract and bundled SQLite DLLs; the manifest is Authenticode-signed and RFC3161-timestamped.
 * **The engine** (`src\`, `GroupInventory.Engine.dll`) is passive and offline: it never receives a credential or a token.
   It owns staging in a durable SQLite database, checkpoints, de-duplication, reconciliation, sealing and the streaming exports.
 * **Fail-closed**: if any source, page, worker or list is incomplete, or a count does not reconcile, the run is **not sealed**
