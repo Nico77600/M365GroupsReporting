@@ -1,4 +1,4 @@
-# Synthetic configuration, retention, package and documentation contract tests. No network or credentials.
+﻿# Synthetic configuration, retention, package and documentation contract tests. No network or credentials.
 Describe 'M365GroupsReporting Purview parity' {
     BeforeAll {
         $root = Split-Path -Parent $PSScriptRoot
@@ -27,8 +27,12 @@ Describe 'M365GroupsReporting Purview parity' {
         }
         function New-PackageSource([string]$Name) {
             $folder=Join-Path $TestDrive $Name;[void][IO.Directory]::CreateDirectory($folder)
-            foreach($relative in 'Invoke-M365GroupsReporting.ps1','Get-SiteUrls.ps1','README.md','THIRD-PARTY-NOTICES.md','M365GroupsReporting.PackageIntegrity.psd1','docs\GroupInventory-Guide.md','docs\GroupInventory-Guide.html','templates\GroupInventory.template.html','engine\GroupInventory.Engine.csproj','config\M365GroupsReporting.config.psd1') {
+            foreach($relative in 'Invoke-M365GroupsReporting.ps1','Get-SiteUrls.ps1','README.md','LICENSE','THIRD-PARTY-NOTICES.md','Test-PackageIntegrity.ps1','tools\New-IntegrityManifest.ps1','docs\runtime-README.md','docs\images\readme-banner-light.svg','docs\images\readme-banner-dark.svg','docs\images\report-overview.png','docs\images\report-details.png','docs\GroupInventory-Guide.md','docs\GroupInventory-Guide.html','templates\GroupInventory.template.html','engine\GroupInventory.Engine.csproj','config\M365GroupsReporting.config.psd1') {
                 $target=Join-Path $folder $relative;[void][IO.Directory]::CreateDirectory((Split-Path -Parent $target));Copy-Item -LiteralPath (Join-Path $root $relative) -Destination $target
+                if ([IO.Path]::GetExtension($target) -ceq '.ps1') {
+                    $unsigned=[IO.File]::ReadAllText($target) -replace '(?ms)^# SIG # Begin signature block.*\z',''
+                    [IO.File]::WriteAllText($target,$unsigned,[Text.UTF8Encoding]::new($true))
+                }
             }
             Copy-Item -LiteralPath (Join-Path $root 'engine\bin') -Destination (Join-Path $folder 'engine') -Recurse
             $config=Join-Path $folder 'config\M365GroupsReporting.config.psd1'
@@ -114,13 +118,13 @@ Describe 'M365GroupsReporting Purview parity' {
         $reportRoot=Join-Path $base 'configured-reports';$logRoot=Join-Path $base 'configured-logs'
         $text=[IO.File]::ReadAllText((Join-Path $root 'config\M365GroupsReporting.config.psd1')).Replace("OutputPath         = '.\reports'","OutputPath         = '$reportRoot'").Replace("Path = '.\logs'","Path = '$logRoot'").Replace("FilePrefix         = 'M365GroupsReporting'","FilePrefix         = 'ConfiguredPrefix'")
         [IO.File]::WriteAllText($configPath,$text)
-        & (Get-Command pwsh).Source -NoProfile -File (Join-Path $root 'Invoke-M365GroupsReporting.ps1') -ConfigPath $configPath -ResumeRun $snapshot -NoRetention *> (Join-Path $base 'execution.txt')
+        & (Get-Command pwsh).Source -NoProfile -File (Join-Path $root 'Invoke-M365GroupsReporting.ps1') -SourceDevelopment -ConfigPath $configPath -ResumeRun $snapshot -NoRetention *> (Join-Path $base 'execution.txt')
         Check ($LASTEXITCODE -eq 0) ("Sealed re-export succeeds without credentials: " + [IO.File]::ReadAllText((Join-Path $base 'execution.txt')))
         Check ((Test-Path (Join-Path $reportRoot 'run_entrypoint\ConfiguredPrefix.csv')) -and (Test-Path (Join-Path $reportRoot 'run_entrypoint\ConfiguredPrefix.html'))) 'Config paths/formats/prefix applied'
         $logs=@(Get-ChildItem (Join-Path $logRoot 'run_entrypoint') -Filter '*.log')
         Check ($logs.Count -gt 0 -and ([IO.File]::ReadAllText($logs[0].FullName).Contains('execution completed'))) 'Configured log lifecycle'
         $override=Join-Path $base 'override-reports'
-        & (Get-Command pwsh).Source -NoProfile -File (Join-Path $root 'Invoke-M365GroupsReporting.ps1') -ConfigPath $configPath -ResumeRun $snapshot -Format CSV -OutName OverridePrefix -OutputPath $override -ClientSecret 'synthetic-only-not-a-credential' -NoRetention *> (Join-Path $base 'override.txt')
+        & (Get-Command pwsh).Source -NoProfile -File (Join-Path $root 'Invoke-M365GroupsReporting.ps1') -SourceDevelopment -ConfigPath $configPath -ResumeRun $snapshot -Format CSV -OutName OverridePrefix -OutputPath $override -ClientSecret 'synthetic-only-not-a-credential' -NoRetention *> (Join-Path $base 'override.txt')
         Check ($LASTEXITCODE -eq 0) 'Legacy CLI secret guard does not prevent sealed export'
         Check ((Test-Path (Join-Path $override 'run_entrypoint\OverridePrefix.csv')) -and -not (Test-Path (Join-Path $override 'run_entrypoint\OverridePrefix.html'))) 'CLI overrides authoritative config defaults'
         $logText=(@(Get-ChildItem (Join-Path $logRoot 'run_entrypoint') -Filter '*.log' | ForEach-Object {[IO.File]::ReadAllText($_.FullName)})) -join "`n"
@@ -172,44 +176,70 @@ Describe 'M365GroupsReporting Purview parity' {
     It 'sanitizes package configuration, includes runtime/guide/notices and never ships bin or data' {
         $source=New-PackageSource 'package-source'
         $destination=Join-Path $TestDrive 'package-result'
-        & (Join-Path $root 'tools\New-GroupInventoryPackage.ps1') -SourceRoot $source -Destination $destination | Out-Null
+        & (Join-Path $root 'tools\New-GroupInventoryPackage.ps1') -Stage Prepare -SourceRoot $source -Destination $destination | Out-Null
         $config=Import-PowerShellDataFile -LiteralPath (Join-Path $destination 'config\M365GroupsReporting.config.psd1')
         Check (-not $config.Tenant.TenantId -and -not $config.Tenant.Organization -and -not $config.Report.CompanyName -and -not $config.Report.EnvironmentName) 'Private config sanitized'
         Check (-not $config.Report.ShowTenantInformation) 'Tenant display reset'
         Check ((Test-Path (Join-Path $destination 'lib\engine\GroupInventory.Engine.dll')) -and (Test-Path (Join-Path $destination 'docs\GroupInventory-Guide.html'))) 'Runnable packaged engine and HTML guide'
+        $manifest=Import-PowerShellDataFile -LiteralPath (Join-Path $destination 'M365GroupsReporting.PackageIntegrity.psd1')
+        Check ($manifest.Files.Path -contains 'lib\engine\GroupInventory.Engine.dll') 'Compiled engine is immutable authority'
+        Check (-not ($manifest.Files.Path -contains 'config\M365GroupsReporting.config.psd1') -and
+            @($manifest.Files.Path | Where-Object { $_ -match '^(src|engine|tools|tests|\.github)\\' }).Count -eq 0) 'No source hashes or editable config in runtime manifest'
+        foreach($entry in $manifest.Files) {
+            Check ((Get-FileHash -LiteralPath (Join-Path $destination $entry.Path)).Hash -ceq $entry.Sha256) "Actual staged byte hash: $($entry.Path)"
+        }
+        Check ((Get-FileHash (Join-Path $destination 'README.md')).Hash -eq (Get-FileHash (Join-Path $source 'docs\runtime-README.md')).Hash) 'Package README has the actual runtime contract'
+        Reject { & (Join-Path $root 'tools\New-GroupInventoryPackage.ps1') -Stage RefreshManifest -SourceRoot $source -Destination $destination } 'signing is pending'
+        Reject { & (Join-Path $root 'tools\New-GroupInventoryPackage.ps1') -Stage Finalize -SourceRoot $source -Destination $destination } 'signing is pending'
+        Check (Test-Path (Join-Path $destination '.publication-pending')) 'Failed finalization preserves pending state'
         Check (@(Get-ChildItem $destination -Recurse -Directory | Where-Object Name -in 'data','reports','logs','bin').Count -eq 0) 'No forbidden directory'
         foreach($file in Get-ChildItem $destination -Recurse -File | Where-Object Extension -in '.ps1','.psd1','.md','.html') { Check (-not ([IO.File]::ReadAllText($file.FullName).Contains('synthetic.onmicrosoft.com'))) 'No tenant values in package' }
-        Reject { & (Join-Path $root 'tools\New-GroupInventoryPackage.ps1') -SourceRoot $source -Destination (Join-Path $source 'inside') } 'outside'
+        Reject { & (Join-Path $root 'tools\New-GroupInventoryPackage.ps1') -Stage Prepare -SourceRoot $source -Destination (Join-Path $source 'inside') } 'outside'
         $runtimeSnapshot=New-Snapshot $TestDrive 'run_package_runtime' 0
         & (Get-Command pwsh).Source -NoProfile -File (Join-Path $destination 'Invoke-M365GroupsReporting.ps1') -ResumeRun $runtimeSnapshot -NoRetention *> (Join-Path $TestDrive 'package-runtime.txt')
-        Check ($LASTEXITCODE -eq 0) ("Compiled lib\engine package must run: " + [IO.File]::ReadAllText((Join-Path $TestDrive 'package-runtime.txt')))
+        Check ($LASTEXITCODE -ne 0 -and [IO.File]::ReadAllText((Join-Path $TestDrive 'package-runtime.txt')).Contains('signing is pending')) 'Unsigned preparation must fail before compiled engine/business logic'
+        & (Get-Command pwsh).Source -NoProfile -File (Join-Path $destination 'Invoke-M365GroupsReporting.ps1') -SourceDevelopment -ResumeRun $runtimeSnapshot -NoRetention *> (Join-Path $TestDrive 'package-source-mode.txt')
+        Check ($LASTEXITCODE -ne 0 -and [IO.File]::ReadAllText((Join-Path $TestDrive 'package-source-mode.txt')).Contains('never a runtime artifact')) 'Source mode cannot bypass runtime authentication'
         $marker=Join-Path $destination '.M365GroupsReporting.executed'
-        Check (Test-Path $marker) 'Runtime marks an executed package even with external snapshot storage'
-        Reject { & (Join-Path $root 'tools\New-GroupInventoryPackage.ps1') -SourceRoot $source -Destination $destination -Force } 'executed|data'
+        Check (-not (Test-Path $marker)) 'Pending package never enters business execution'
+        Set-Content -LiteralPath $marker -Value 'Synthetic executed-package preservation fixture'
+        Reject { & (Join-Path $root 'tools\New-GroupInventoryPackage.ps1') -Stage Prepare -SourceRoot $source -Destination $destination -Force } 'executed|data'
         Check (Test-Path $marker) 'Executed package left untouched'
     }
     It 'tenant and secret-shaped scans fail atomically without replacing an existing unexecuted package' {
         $source=New-PackageSource 'package-scan-source'
         $destination=Join-Path $TestDrive 'package-scan-result'
         $tool=Join-Path $root 'tools\New-GroupInventoryPackage.ps1'
-        & $tool -SourceRoot $source -Destination $destination | Out-Null
+        & $tool -Stage Prepare -SourceRoot $source -Destination $destination | Out-Null
         $before=(Get-FileHash (Join-Path $destination 'README.md')).Hash
-        Add-Content -LiteralPath (Join-Path $source 'README.md') -Value 'synthetic.onmicrosoft.com'
-        Reject { & $tool -SourceRoot $source -Destination $destination -Force } 'tenant|branding'
+        Add-Content -LiteralPath (Join-Path $source 'docs\runtime-README.md') -Value 'synthetic.onmicrosoft.com'
+        Reject { & $tool -Stage Prepare -SourceRoot $source -Destination $destination -Force } 'tenant|branding'
         Check ((Get-FileHash (Join-Path $destination 'README.md')).Hash -eq $before) 'Failed scan keeps existing package'
-        Copy-Item -LiteralPath (Join-Path $root 'README.md') -Destination (Join-Path $source 'README.md') -Force
-        Add-Content -LiteralPath (Join-Path $source 'README.md') -Value "ClientSecret = 'synthetic-secret-not-a-credential'"
-        Reject { & $tool -SourceRoot $source -Destination $destination -Force } 'Secret-shaped'
+        Copy-Item -LiteralPath (Join-Path $root 'docs\runtime-README.md') -Destination (Join-Path $source 'docs\runtime-README.md') -Force
+        Add-Content -LiteralPath (Join-Path $source 'docs\runtime-README.md') -Value "ClientSecret = 'synthetic-secret-not-a-credential'"
+        Reject { & $tool -Stage Prepare -SourceRoot $source -Destination $destination -Force } 'Secret-shaped'
         Check ((Get-FileHash (Join-Path $destination 'README.md')).Hash -eq $before) 'Secret rejection is atomic'
         Check (@(Get-ChildItem $TestDrive -Force -Directory -Filter '.M365GroupsReporting-stage-*').Count -eq 0) 'No failed staging artifact'
+    }
+    It 'refuses missing compiled runtime bytes and stale built templates before preparation' {
+        $source=New-PackageSource 'package-build-contract'
+        $tool=Join-Path $root 'tools\New-GroupInventoryPackage.ps1'
+        $destination=Join-Path $TestDrive 'package-missing-build'
+        Remove-Item -LiteralPath (Join-Path $source 'engine\bin\GroupInventory.Engine.dll')
+        Reject { & $tool -Stage Prepare -SourceRoot $source -Destination $destination } 'Required package source missing'
+        Check (-not (Test-Path $destination)) 'Missing engine never promoted'
+        Copy-Item (Join-Path $root 'engine\bin\GroupInventory.Engine.dll') (Join-Path $source 'engine\bin\GroupInventory.Engine.dll')
+        Add-Content (Join-Path $source 'engine\bin\GroupInventory.template.html') 'synthetic-stale-template'
+        Reject { & $tool -Stage Prepare -SourceRoot $source -Destination $destination } 'built HTML template is stale'
+        Check (-not (Test-Path $destination)) 'Stale template never promoted'
     }
 }
 
 # SIG # Begin signature block
 # MIIghAYJKoZIhvcNAQcCoIIgdTCCIHECAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBD38mHhb+pTKBo
-# AphFaFf3ZkD0TKKLmTc07mS+WsxAGqCCDW8wggZyMIIEWqADAgECAghkM1HTxzif
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCB/RYN89sAlt645
+# KZBmgyd/RRqVoDRodjdm3JZL3fi1g6CCDW8wggZyMIIEWqADAgECAghkM1HTxzif
 # CDANBgkqhkiG9w0BAQsFADB8MQswCQYDVQQGEwJVUzEOMAwGA1UECAwFVGV4YXMx
 # EDAOBgNVBAcMB0hvdXN0b24xGDAWBgNVBAoMD1NTTCBDb3Jwb3JhdGlvbjExMC8G
 # A1UEAwwoU1NMLmNvbSBSb290IENlcnRpZmljYXRpb24gQXV0aG9yaXR5IFJTQTAe
@@ -286,23 +316,23 @@ Describe 'M365GroupsReporting Purview parity' {
 # A1UEAwwrU1NMLmNvbSBDb2RlIFNpZ25pbmcgSW50ZXJtZWRpYXRlIENBIFJTQSBS
 # MQIQBof4ljXihJpmCqqt2mhAWzANBglghkgBZQMEAgEFAKCBhDAYBgorBgEEAYI3
 # AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwGCisG
-# AQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3DQEJBDEiBCDh29m6vDnh
-# 4Ieq6k0aHsfLaNu7Hl86GhMMptBohmx15jANBgkqhkiG9w0BAQEFAASCAgBwdV4e
-# +GTvFe1/CNXve5D2Y9oV2ZJtog2Oxl+I3CAtT4ayrFewmcKzBccLtjBbRRNtw54S
-# 0ebO/idtZk0eT9QQ2APTpmVc5WV09qBtbVj7TYcfftPYT/tCZMKVVlpizzKIYIM/
-# HDEKdmTYGYKZfrABENjOUvUmyaWyzr1+VX2NQ6bNRi0H99yyXUXZcNmFoqFacpRc
-# da7BBOzsQwvM1+reG94OwyaQsrxclBEEGRytslDF//p1PwaNjpF9HnvmjqnvDLcA
-# 3+1VRDMWpwicaTypFjbG9VVkGir5A/VOWB8GAPzRd8u2+bk7BH9ZSbWKnIoCi/+9
-# P7Qjk+GevlTb4cFzNMcL4gelPKUGtnNFbZ1ogE5NuzIuPyL88NQrZTyRHZ1uB3z2
-# 2UZS00UwkfnG8FRB0y19TfxckG5LRvXvslQ+8Xav1kI8fnt7IHy3sWk7ocWM6+lD
-# EpWYIz8GiVnUrJ8sW1VflLC1d/QQKxi6ixKcIwQ2zFRWqEKnCqvfQzLTlg/baww7
-# eBqSNpIRqmr53OIY8iGTHnDUSQilIvf8KNvoInICFNxp+7kfIdUrbQqN9AzJlEkV
-# iRa0bK9b9pJBEhEHMyyoWCcz+v8CybcIx7GKJpy1u/ChorVJZq2Wt0ShOl6aC58D
-# 1r93ANUE/kgoAA/ZoUHEPKGnmrvWJq9msnVfnKGCDygwgg8kBgorBgEEAYI3AwMB
+# AQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3DQEJBDEiBCBKSsNcAARx
+# pYdVxYGHceK7NwybP52UQxM0AV1Zd2zsDzANBgkqhkiG9w0BAQEFAASCAgCm3ESN
+# YKhMvEj2LUbzEOvgzCojMJ2RkxiPV3cG1sJOL4GG6HhrjB2R+UOD4ccIZ4MYwkrR
+# ovGDX0lMB7tCaIXImJ0Iyizn6hK8p8Pa/poHAdzXqsw0SDRM5tfsgvglOcNV9xAy
+# M5W1pESPaSb8hWudxLqHgo2RI6n1gt9kOPDknDF9Izy6bvY8+/SBvxpDz5DSh8Pr
+# usQLDh7ITPk5bawKQQV6k6V633aSC/3/eXKwgOT52BpQZvA0+4MfdFbIsWIFhMP3
+# 4jei0HpUaBEZ6+aCzZwCHn1ajZXAcxoPcOAX+y8lFnCYKc/521Otgsi7LrWEIUAh
+# 9bKhjjZz6B8mglOpPPHEQ/xlzzuK3agnUYQZu14PPAI1dvj+Tum9JuC9Br2LpVqB
+# FyonrbtrSxJR0P+aImz56qKR+W3PgtKIKY12aV1taSx2SAQOJINICqrAMJGirt8q
+# CVmLaOWIKTRE35TdNRdDSTFlI1DjXq7jGYT80xjtdbxCJyUsrN+xBwGbbKG2IdAu
+# K+MUTMWIFBhGnE+Ul3eXYCMJVI8chNDasxv4MACx5sLe/hO75gtzFJY2IRUl3i7A
+# D5nE6Q0NhpNDPqCrbDKcQuY3sjEaOMoVbMX3G5gl7I80pV9LNszeEm4pYRb9JOIo
+# SMT07NYPj+OlWOKItkbHdHjVMDUc5W2G6T/SaqGCDygwgg8kBgorBgEEAYI3AwMB
 # MYIPFDCCDxAGCSqGSIb3DQEHAqCCDwEwgg79AgEDMQ0wCwYJYIZIAWUDBAIBMIGJ
 # BgsqhkiG9w0BCRABBKB6BHgwdgIBAQYMKwYBBAGCqTABAwYBMDEwDQYJYIZIAWUD
-# BAIBBQAEII96PYa5l3kcRYULzf0AgnnYHOkgfBFPru/3v8TEp+5vAghAha8TEJsh
-# kRgPMjAyNjEwMTQxNzI4MDRaMAMCAQECEDWdzaHFTa25Y2NXZgLS8lOgggwAMIIE
+# BAIBBQAEIIMPtSAr+hxW/GLR+aIc19ygEhf+lf/jiGM8U8Fe1j5ZAggHGV9j2hqx
+# 2BgPMjAyNjEwMTQyMDA4MjRaMAMCAQECEFGoCPhksVbKo3NQi5V/K3+gggwAMIIE
 # /DCCAuSgAwIBAgIQH2sWYtIuG2xd8cDBoGAOODANBgkqhkiG9w0BAQsFADBzMQsw
 # CQYDVQQGEwJVUzEOMAwGA1UECAwFVGV4YXMxEDAOBgNVBAcMB0hvdXN0b24xETAP
 # BgNVBAoMCFNTTCBDb3JwMS8wLQYDVQQDDCZTU0wuY29tIFRpbWVzdGFtcGluZyBJ
@@ -371,13 +401,13 @@ Describe 'M365GroupsReporting Purview parity' {
 # VQQHDAdIb3VzdG9uMREwDwYDVQQKDAhTU0wgQ29ycDEvMC0GA1UEAwwmU1NMLmNv
 # bSBUaW1lc3RhbXBpbmcgSXNzdWluZyBSU0EgQ0EgUjECEB9rFmLSLhtsXfHAwaBg
 # DjgwCwYJYIZIAWUDBAIBoIIBYTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQw
-# HAYJKoZIhvcNAQkFMQ8XDTI2MTAxNDE3MjgwNFowKAYJKoZIhvcNAQk0MRswGTAL
-# BglghkgBZQMEAgGhCgYIKoZIzj0EAwIwLwYJKoZIhvcNAQkEMSIEIFnS7sAanC/O
-# Ly1+0uQBmRBc7XHGQj33XACffA5SmmmbMIHJBgsqhkiG9w0BCRACLzGBuTCBtjCB
+# HAYJKoZIhvcNAQkFMQ8XDTI2MTAxNDIwMDgyNFowKAYJKoZIhvcNAQk0MRswGTAL
+# BglghkgBZQMEAgGhCgYIKoZIzj0EAwIwLwYJKoZIhvcNAQkEMSIEINZKRjdaFsis
+# Joe91eEXnb/cgCTdlWEXcr1wpCkfT1dQMIHJBgsqhkiG9w0BCRACLzGBuTCBtjCB
 # szCBsAQgVCr5oWqNci5mEUl4iumUwYqaruWmXLNEolSa+Wx5x4swgYswd6R1MHMx
 # CzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVUZXhhczEQMA4GA1UEBwwHSG91c3RvbjER
 # MA8GA1UECgwIU1NMIENvcnAxLzAtBgNVBAMMJlNTTC5jb20gVGltZXN0YW1waW5n
 # IElzc3VpbmcgUlNBIENBIFIxAhAfaxZi0i4bbF3xwMGgYA44MAoGCCqGSM49BAMC
-# BEYwRAIgC/M4DvXX7H5buOMCrra1+ET2LzIEbCx6w9kayqu+0MsCIFAPcj1SjHJJ
-# yFKUWBj0XnlgNNF0aMxEFX8Z7gYuDU4M
+# BEYwRAIgOXVyYK1ceO0LOtU4Jwo/bq1YrCJ1eit7MSZVmhos+sUCIAlCMFSuH329
+# x/9qxd0kMUz4KV2PIJ+g/Fuq+TWeSVCs
 # SIG # End signature block

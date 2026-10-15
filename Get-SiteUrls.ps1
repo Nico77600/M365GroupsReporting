@@ -7,18 +7,44 @@
     Le script connecte SPO (interactif) si besoin, puis Get-SPOSite -Template GROUP#0 -Limit All,
     et exporte siteurls.csv { GroupId, Url }.
 .PARAMETER AdminUrl
-    URL d'admin SPO, ex: https://m365cpi89259425-admin.sharepoint.com
+    URL d'admin SPO, ex: https://example-admin.sharepoint.com
 .PARAMETER WorkDir
     Dossier de sortie de siteurls.csv (cree si absent). Par defaut : le dossier de ce script.
 .EXAMPLE
-    .\Get-SiteUrls.ps1 -AdminUrl https://m365cpi89259425-admin.sharepoint.com
+    .\Get-SiteUrls.ps1 -AdminUrl https://example-admin.sharepoint.com
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)] [string] $AdminUrl,
-    [string] $WorkDir = $PSScriptRoot
+    [string] $WorkDir = $PSScriptRoot,
+    [switch]$SourceDevelopment
 )
 $ErrorActionPreference = 'Stop'
+if ($SourceDevelopment) {
+    if (-not (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.git')) -or
+        -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'engine\GroupInventory.Engine.csproj')) -or
+        -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'Build-Engine.ps1')) -or
+        -not (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'src\GroupInventory.Engine.Engine.cs')) -or
+        (Test-Path -LiteralPath (Join-Path $PSScriptRoot 'lib\engine')) -or
+        (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.publication-pending'))) {
+        throw 'SourceDevelopment is restricted to a source Git checkout, never a runtime artifact.'
+    }
+    Write-Warning 'SOURCE DEVELOPMENT ONLY: this checkout is not authenticated release code.'
+} else {
+    if (Test-Path -LiteralPath (Join-Path $PSScriptRoot '.publication-pending')) {
+        throw 'Package signing is pending. This preparation artifact cannot run.'
+    }
+    $verifier = Join-Path $PSScriptRoot 'Test-PackageIntegrity.ps1'
+    $signature = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $verifier -ErrorAction Stop
+    if ([string]$signature.Status -cne 'Valid' -or $null -eq $signature.SignerCertificate -or
+        $signature.SignerCertificate.Thumbprint -cne '0F28E442889F17B5F4D251E8F96E7CC6E2C9C6D6' -or
+        $null -eq $signature.TimeStamperCertificate) {
+        throw 'Package integrity: expected trusted, timestamped owner signature on verifier.'
+    }
+    $pwsh = (Get-Command pwsh.exe -CommandType Application -ErrorAction Stop).Source
+    & $pwsh -NoProfile -NonInteractive -File $verifier -Root $PSScriptRoot
+    if ($LASTEXITCODE -ne 0) { throw 'Package integrity verification failed before SharePoint module loading.' }
+}
 if (-not $WorkDir) { throw "WorkDir could not be resolved (script folder unknown). Pass -WorkDir." }
 if (-not (Test-Path -LiteralPath $WorkDir)) { New-Item -ItemType Directory -Path $WorkDir -Force | Out-Null }
 Import-Module Microsoft.Online.SharePoint.PowerShell -ErrorAction Stop
@@ -46,10 +72,10 @@ $rows | Export-Csv -Path $out -NoTypeInformation -Encoding UTF8
 Write-Host "OK : $($rows.Count) sites de groupe -> $out" -ForegroundColor Green
 
 # SIG # Begin signature block
-# MIIghQYJKoZIhvcNAQcCoIIgdjCCIHICAQExDzANBglghkgBZQMEAgEFADB5Bgor
+# MIIghAYJKoZIhvcNAQcCoIIgdTCCIHECAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCARw80vgMtDQpkw
-# zKYOic/2KUKQiFO9IxHTUqQEQnT1JKCCDW8wggZyMIIEWqADAgECAghkM1HTxzif
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBokFRcQar01IoG
+# r0m0EA88mvEJXl5UVBwAeBpZum51mKCCDW8wggZyMIIEWqADAgECAghkM1HTxzif
 # CDANBgkqhkiG9w0BAQsFADB8MQswCQYDVQQGEwJVUzEOMAwGA1UECAwFVGV4YXMx
 # EDAOBgNVBAcMB0hvdXN0b24xGDAWBgNVBAoMD1NTTCBDb3Jwb3JhdGlvbjExMC8G
 # A1UEAwwoU1NMLmNvbSBSb290IENlcnRpZmljYXRpb24gQXV0aG9yaXR5IFJTQTAe
@@ -121,28 +147,28 @@ Write-Host "OK : $($rows.Count) sites de groupe -> $out" -ForegroundColor Green
 # ULeH38N0Vr83psiJVuBSxQyt5nRVrpYz7FACq5gtXELkyViq/rGOlJKaRrgQ6WWq
 # eoIXqKhVFAdP/jAEm2M8ezoVYsUgPyKY2OcuecV9coulAcxUIUydx6qYiOfsGj5u
 # Dy7l4aYjvB771wkUMzUQwxzcDYXJtMMTaWRe6n9EemR67jc73u5CJyFg3PfA5WR1
-# wZislcdCZuS6MYISbDCCEmgCAQEwgYwweDELMAkGA1UEBhMCVVMxDjAMBgNVBAgM
+# wZislcdCZuS6MYISazCCEmcCAQEwgYwweDELMAkGA1UEBhMCVVMxDjAMBgNVBAgM
 # BVRleGFzMRAwDgYDVQQHDAdIb3VzdG9uMREwDwYDVQQKDAhTU0wgQ29ycDE0MDIG
 # A1UEAwwrU1NMLmNvbSBDb2RlIFNpZ25pbmcgSW50ZXJtZWRpYXRlIENBIFJTQSBS
 # MQIQBof4ljXihJpmCqqt2mhAWzANBglghkgBZQMEAgEFAKCBhDAYBgorBgEEAYI3
 # AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwGCisG
-# AQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3DQEJBDEiBCCV8PpN1uh6
-# 3mm0CVF4Ecyeeucpi8C/XtEP6jYSLeA0FzANBgkqhkiG9w0BAQEFAASCAgBd6h3K
-# BwPeTtyYRkzyNmne+ju6lL4uAO8lmKIp0W5ph1SEkowBbM5Wzi49hH3wIJUJHrNf
-# WIMH17w6cxp1Yp0+jOkRb4+EJLXHgsSJn2Vn9+QuI6f9yFwpcvaziIrqc8IeFnRv
-# Wg2PuG5l5LOOXPxYOSgA+jU0sCgs9XwTMifULRDhf1q5mxOZjIM3K+eSxgNgKQYa
-# ss6p9DpnKJLSeCnKb2o/XsPtU9ZEs9VvZs5P0w943PilWcgm/AW/6ApYKivpgR1i
-# wln8QIRI06OXJnUt8b44VgI3pCh3YI1Pp0r1zu1fKA+Vr0Utw9hNTGtpTOsRH5V4
-# qkT3OJT1qCH93JxINGfaV9NPqw/ibC3EaUQ20iAf2J69DSgI8WsvgWqICtTxzIEm
-# jY0kOmRnhMxs12ACg+Mq9wGaeIsS2VkvOLP3zHxpsQIdYpreStvCHHnzs9saSoy2
-# TQG1Ijr1RdoTOgDxIlm8sEGSTtn3z5Ewx2nqavLQAfClcqClbQrCrrGLzqTB3AOK
-# HfFoADHq9Y2FNgg2sNu5tsPCyXDLKdck1QM36fAvvV9PZAhQqdU+XmuNK8PtWbOn
-# nqaASYxJNag+I39TPoGhsTSOJSusNYw8HNrwArhvHIRYjM1KbXHaSmQdpFOd+KHn
-# XTYLrJ76p0Pwemk5zfS3QpisTNglbkQ3F5qweKGCDykwgg8lBgorBgEEAYI3AwMB
-# MYIPFTCCDxEGCSqGSIb3DQEHAqCCDwIwgg7+AgEDMQ0wCwYJYIZIAWUDBAIBMIGJ
+# AQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3DQEJBDEiBCA36A8nFwbI
+# rel+Y9Dk8eIzjCUhe1s6Fc/bxfCxTIcbBTANBgkqhkiG9w0BAQEFAASCAgBRcyts
+# +dRm+JPwGnz0+RJZdszSoQr+cVIHziByu0VfVikL5v5a6ayUcOB9wouGXUr0PlP9
+# S/hHbMWPwEc7kHz2+UwKJsi0bDZxSyB03y5A4/io347ZyQ754MUue51Mm3Vn4cU6
+# Ovh8strLd55gSjqNFfcDixK0gThavpf2TpGqw/tsEWtiqS7m7hYvdl73INT7Kw+p
+# /9WH2hxtU0WwlVqIN2CMqwY/5i3eTu5vW7JOBSJRZJA5W6mcuJ0lJdMCF84Ig4nz
+# oGU42oza/el0vkn4Y67lfOTLcCvm+zLe8G9gNs+D2Jh+M3Xd2oTdubVGjSPz40YF
+# M20yUac2U4vUHpnu9RXhhCNXf2Lqj/eUv15X4t/Roo5DJqNC/eOXLjbyTb99Bs6/
+# LtC3usIpKKWKfmAsEPNmwdooVmQU9uYbnh923+fpTlySAoXDKp5veWVhgF0Erdxw
+# BFB6MxaEQPoR+bka+M4q9pO0Gy9oJjsaOM559J8EEzRsQRyPDo+isKqMlzFZEMVf
+# NsKO3w/yhUFDZ47NK8jb7JmJIFxgTjpjG7I3Zp+6oIRbWQru8DlXGJSAGyV7KrHQ
+# GSmNStlnyPECfbwdCTE8m286QcuxrTk3S33jSuu99eP80kg6oIZoLhZXpjYe77d+
+# gWA1t+eTVwQ7ssyRSIfKD4hy1j9/7l3Q0J+NJ6GCDygwgg8kBgorBgEEAYI3AwMB
+# MYIPFDCCDxAGCSqGSIb3DQEHAqCCDwEwgg79AgEDMQ0wCwYJYIZIAWUDBAIBMIGJ
 # BgsqhkiG9w0BCRABBKB6BHgwdgIBAQYMKwYBBAGCqTABAwYBMDEwDQYJYIZIAWUD
-# BAIBBQAEIIh8T1+OqGRntMEG6R8Gk5+M4SHqpdoyzrtEd47pyCnpAggLBzVd1G9l
-# WBgPMjAyNjEwMTQxNzM4NDRaMAMCAQECEFVLlxfcQhKWRArYy1Ib2l+gggwAMIIE
+# BAIBBQAEIKtPHBztK1/YppvNSrhxZ2m5s9gGLwrmqJG/lePlhP6zAggzmIdQyymn
+# DBgPMjAyNjEwMTQyMDA4MDJaMAMCAQECECtQB/oMHEAFMVNvU0yf9YegggwAMIIE
 # /DCCAuSgAwIBAgIQH2sWYtIuG2xd8cDBoGAOODANBgkqhkiG9w0BAQsFADBzMQsw
 # CQYDVQQGEwJVUzEOMAwGA1UECAwFVGV4YXMxEDAOBgNVBAcMB0hvdXN0b24xETAP
 # BgNVBAoMCFNTTCBDb3JwMS8wLQYDVQQDDCZTU0wuY29tIFRpbWVzdGFtcGluZyBJ
@@ -207,17 +233,17 @@ Write-Host "OK : $($rows.Count) sites de groupe -> $out" -ForegroundColor Green
 # daAvJgTfe9MiL2nSBioYe/g5mHUSWAay/Ip1RQmQCvmF9sNfqlhJwkjy/1U1ibUk
 # TIUBX3HgymyQvqQTZLLys6pL2tCdWcjI9YuLw30rgZm8+K387L7ycUvqrmQ3ZJlu
 # jHl3r1hgV76s3WwMPgKk1bAEFMj+rRXimSC+Ev30hXZdqyMdl/il5Ksd0vhGMYIC
-# WDCCAlQCAQEwgYcwczELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVRleGFzMRAwDgYD
+# VzCCAlMCAQEwgYcwczELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVRleGFzMRAwDgYD
 # VQQHDAdIb3VzdG9uMREwDwYDVQQKDAhTU0wgQ29ycDEvMC0GA1UEAwwmU1NMLmNv
 # bSBUaW1lc3RhbXBpbmcgSXNzdWluZyBSU0EgQ0EgUjECEB9rFmLSLhtsXfHAwaBg
 # DjgwCwYJYIZIAWUDBAIBoIIBYTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQw
-# HAYJKoZIhvcNAQkFMQ8XDTI2MTAxNDE3Mzg0NFowKAYJKoZIhvcNAQk0MRswGTAL
-# BglghkgBZQMEAgGhCgYIKoZIzj0EAwIwLwYJKoZIhvcNAQkEMSIEIH1DptxD6Wtz
-# jlguaL9hGy1W/0WZ1LoaN8MEtc6vb/mfMIHJBgsqhkiG9w0BCRACLzGBuTCBtjCB
+# HAYJKoZIhvcNAQkFMQ8XDTI2MTAxNDIwMDgwMlowKAYJKoZIhvcNAQk0MRswGTAL
+# BglghkgBZQMEAgGhCgYIKoZIzj0EAwIwLwYJKoZIhvcNAQkEMSIEIHgTIB6qiWFm
+# xTEA9vFak2mPocsxuyQxW8CYI/ktOR+OMIHJBgsqhkiG9w0BCRACLzGBuTCBtjCB
 # szCBsAQgVCr5oWqNci5mEUl4iumUwYqaruWmXLNEolSa+Wx5x4swgYswd6R1MHMx
 # CzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVUZXhhczEQMA4GA1UEBwwHSG91c3RvbjER
 # MA8GA1UECgwIU1NMIENvcnAxLzAtBgNVBAMMJlNTTC5jb20gVGltZXN0YW1waW5n
 # IElzc3VpbmcgUlNBIENBIFIxAhAfaxZi0i4bbF3xwMGgYA44MAoGCCqGSM49BAMC
-# BEcwRQIhAJR4bozz5QgGoIoJefCaB4x2ukpgTbPLhmUPqCDA/DwlAiB1vkoHxyRm
-# sbUFxcYm+4p9lnuHa68nDcPutYFfjEQg5Q==
+# BEYwRAIgbEo77G8Rjr4zeU/5OspOayLLLIZ4x2045sd1MuyzTAMCIDNbVZPdO+jO
+# Mes6WKz1PO6xbH3Gz2IYs2qnGL3ISe9X
 # SIG # End signature block

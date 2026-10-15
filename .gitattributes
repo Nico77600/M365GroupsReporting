@@ -1,3 +1,29 @@
 # Authenticode signatures cover the exact script bytes; never normalize line endings.
-*.ps1 -text
-*.psd1 -text
+*.ps1 -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+*.psd1 -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Every immutable manifest entry preserves its raw bytes across Git checkout.
+*.psm1 -text
+README.md -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+LICENSE -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+THIRD-PARTY-NOTICES.md -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+docs/** -text linguist-documentation whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+templates/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+src/*.cs -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+engine/*.csproj -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+lib/**/*.dll -text
+# Exact owner-signed paths remain byte-preserving even if broader rules change.
+Build-Engine.ps1 -text
+Get-SiteUrls.ps1 -text
+Invoke-M365GroupsReporting.ps1 -text
+Test-PackageIntegrity.ps1 -text
+M365GroupsReporting.PackageIntegrity.psd1 -text
+.github/scripts/Build-CodeQLProduction.ps1 -text
+.github/scripts/Initialize-CIModules.ps1 -text
+.github/scripts/Invoke-CI.ps1 -text
+tests/GroupInventory.Engine.Tests.ps1 -text
+tests/Invoke-M365GroupsReporting.Tests.ps1 -text
+tests/M365GroupsReporting.Parity.Tests.ps1 -text
+tests/PackageIntegrity.Tests.ps1 -text
+tools/Build-Documentation.ps1 -text
+tools/New-GroupInventoryPackage.ps1 -text
+tools/New-IntegrityManifest.ps1 -text
