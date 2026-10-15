@@ -81,11 +81,13 @@
     Do not neutralise spreadsheet formulas (values starting with = + - @ or TAB get a leading apostrophe by default).
 .PARAMETER NoRetention
     Do not apply the configured log/run retention policy for this execution.
+.PARAMETER SourceDevelopment
+    Explicit unauthenticated source-development execution in a Git checkout. Rejected in runtime artifacts.
 .PARAMETER Max
     Collect only the first N groups (testing). The resulting inventory is a deliberate sample.
 .EXAMPLE
     .\Build-Engine.ps1
-    .\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv
+    .\Invoke-M365GroupsReporting.ps1 -SourceDevelopment -SiteUrlsCsv .\siteurls.csv
 .EXAMPLE
     .\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv -Format HTML
 .EXAMPLE
@@ -119,9 +121,40 @@ param(
     [switch] $RawCsvValues,
     [int]    $GridViewMax   = 20000,
     [int]    $SpTimeoutMin,
-    [switch] $NoRetention
+    [switch] $NoRetention,
+    [switch] $SourceDevelopment
 )
 $ErrorActionPreference = 'Stop'
+
+function Assert-M365GroupsRuntime {
+    param([string]$Root, [switch]$SourceDevelopment)
+    $source = (Test-Path -LiteralPath (Join-Path $Root '.git')) -and
+        (Test-Path -LiteralPath (Join-Path $Root 'engine\GroupInventory.Engine.csproj')) -and
+        (Test-Path -LiteralPath (Join-Path $Root 'Build-Engine.ps1')) -and
+        (Test-Path -LiteralPath (Join-Path $Root 'src\GroupInventory.Engine.Engine.cs'))
+    if ($SourceDevelopment) {
+        if (-not $source -or (Test-Path -LiteralPath (Join-Path $Root 'lib\engine')) -or
+            (Test-Path -LiteralPath (Join-Path $Root '.publication-pending'))) {
+            throw 'SourceDevelopment is restricted to a source Git checkout, never a runtime artifact.'
+        }
+        Write-Warning 'SOURCE DEVELOPMENT ONLY: locally built code is not authenticated release code. Never distribute this checkout as a runtime package.'
+        return
+    }
+    if ($source) { throw 'This is a source checkout. Use -SourceDevelopment for local development, or extract an authenticated release ZIP.' }
+    if (Test-Path -LiteralPath (Join-Path $Root '.publication-pending')) {
+        throw 'Package signing is pending. This preparation artifact cannot run.'
+    }
+    $verifier = Join-Path $Root 'Test-PackageIntegrity.ps1'
+    $signature = Microsoft.PowerShell.Security\Get-AuthenticodeSignature -LiteralPath $verifier -ErrorAction Stop
+    if ([string]$signature.Status -cne 'Valid' -or $null -eq $signature.SignerCertificate -or
+        $signature.SignerCertificate.Thumbprint -cne '0F28E442889F17B5F4D251E8F96E7CC6E2C9C6D6' -or
+        $null -eq $signature.TimeStamperCertificate) {
+        throw 'Package integrity: expected trusted, timestamped owner signature on verifier.'
+    }
+    & $verifier -Root $Root
+}
+
+Assert-M365GroupsRuntime -Root $PSScriptRoot -SourceDevelopment:$SourceDevelopment
 
 function Resolve-M365GroupsPath {
     param([Parameter(Mandatory)][string] $Path, [Parameter(Mandatory)][string] $Root)
@@ -519,11 +552,22 @@ function Complete-InventoryRun {
 # ================================================================== #
 function Import-GroupInventoryEngine {
     param([string] $EngineDir)
-    if ('GroupInventory.Engine.InventoryEngine' -as [type]) { return }
     if (-not $EngineDir) {
         $EngineDir = Join-Path $PSScriptRoot 'lib\engine'
         if (-not (Test-Path -LiteralPath (Join-Path $EngineDir 'GroupInventory.Engine.dll'))) { $EngineDir = Join-Path $PSScriptRoot 'engine\bin' }
     }
+    $engineRoot = Split-Path -Parent (Split-Path -Parent ([IO.Path]::GetFullPath($EngineDir)))
+    if ((Split-Path -Leaf (Split-Path -Parent $EngineDir)) -ceq 'lib') {
+        Assert-M365GroupsRuntime -Root $engineRoot
+    } elseif (-not (Test-Path -LiteralPath (Join-Path $engineRoot '.git')) -or
+        -not (Test-Path -LiteralPath (Join-Path $engineRoot 'engine\GroupInventory.Engine.csproj')) -or
+        -not (Test-Path -LiteralPath (Join-Path $engineRoot 'Build-Engine.ps1')) -or
+        -not (Test-Path -LiteralPath (Join-Path $engineRoot 'src\GroupInventory.Engine.Engine.cs')) -or
+        (Test-Path -LiteralPath (Join-Path $engineRoot '.publication-pending')) -or
+        (Test-Path -LiteralPath (Join-Path $engineRoot 'lib\engine'))) {
+        throw 'An unsigned engine can only be loaded from a source Git checkout.'
+    }
+    if ('GroupInventory.Engine.InventoryEngine' -as [type]) { return }
     $dll = Join-Path $EngineDir 'GroupInventory.Engine.dll'
     if (-not (Test-Path -LiteralPath $dll)) { throw "The inventory engine is not built: $dll not found. Run .\Build-Engine.ps1 first (offline, nothing is downloaded)." }
     foreach ($n in 'SQLitePCLRaw.core', 'SQLitePCLRaw.provider.e_sqlite3', 'SQLitePCLRaw.batteries_v2', 'Microsoft.Data.Sqlite', 'GroupInventory.Engine') {
@@ -1161,10 +1205,10 @@ if ($executionSucceeded -and -not $NoRetention) {
 }
 
 # SIG # Begin signature block
-# MIIghgYJKoZIhvcNAQcCoIIgdzCCIHMCAQExDzANBglghkgBZQMEAgEFADB5Bgor
+# MIIghAYJKoZIhvcNAQcCoIIgdTCCIHECAQExDzANBglghkgBZQMEAgEFADB5Bgor
 # BgEEAYI3AgEEoGswaTA0BgorBgEEAYI3AgEeMCYCAwEAAAQQH8w7YFlLCE63JNLG
-# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCDcT4ToCoDGKZlY
-# d1gtijY+Z9BrFZXED/IHEJKFZCPWlaCCDW8wggZyMIIEWqADAgECAghkM1HTxzif
+# KX7zUQIBAAIBAAIBAAIBAAIBADAxMA0GCWCGSAFlAwQCAQUABCBvvJ/SwTJ9WNEy
+# nHoOgKKclItZsuvzZOgRw0xx0BhOFKCCDW8wggZyMIIEWqADAgECAghkM1HTxzif
 # CDANBgkqhkiG9w0BAQsFADB8MQswCQYDVQQGEwJVUzEOMAwGA1UECAwFVGV4YXMx
 # EDAOBgNVBAcMB0hvdXN0b24xGDAWBgNVBAoMD1NTTCBDb3Jwb3JhdGlvbjExMC8G
 # A1UEAwwoU1NMLmNvbSBSb290IENlcnRpZmljYXRpb24gQXV0aG9yaXR5IFJTQTAe
@@ -1236,28 +1280,28 @@ if ($executionSucceeded -and -not $NoRetention) {
 # ULeH38N0Vr83psiJVuBSxQyt5nRVrpYz7FACq5gtXELkyViq/rGOlJKaRrgQ6WWq
 # eoIXqKhVFAdP/jAEm2M8ezoVYsUgPyKY2OcuecV9coulAcxUIUydx6qYiOfsGj5u
 # Dy7l4aYjvB771wkUMzUQwxzcDYXJtMMTaWRe6n9EemR67jc73u5CJyFg3PfA5WR1
-# wZislcdCZuS6MYISbTCCEmkCAQEwgYwweDELMAkGA1UEBhMCVVMxDjAMBgNVBAgM
+# wZislcdCZuS6MYISazCCEmcCAQEwgYwweDELMAkGA1UEBhMCVVMxDjAMBgNVBAgM
 # BVRleGFzMRAwDgYDVQQHDAdIb3VzdG9uMREwDwYDVQQKDAhTU0wgQ29ycDE0MDIG
 # A1UEAwwrU1NMLmNvbSBDb2RlIFNpZ25pbmcgSW50ZXJtZWRpYXRlIENBIFJTQSBS
 # MQIQBof4ljXihJpmCqqt2mhAWzANBglghkgBZQMEAgEFAKCBhDAYBgorBgEEAYI3
 # AgEMMQowCKACgAChAoAAMBkGCSqGSIb3DQEJAzEMBgorBgEEAYI3AgEEMBwGCisG
-# AQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3DQEJBDEiBCA9Utk4+/jZ
-# To23BjibxwsG75nlth91m62pibHzBn4kMjANBgkqhkiG9w0BAQEFAASCAgB0IY+g
-# zd3vgsXBw3+DHqIqdZFdy8FGuQs+mUJdyFVq2w53ok0hz4/K0WC35fov9oN8e7u7
-# t0NWxyCf7MaECsxaXyI7dQRrc9y6qxiBs6phzFx5AJP8KRD2ssaMx0UgpLg1Z6+R
-# Rixe1zOS09N/Hnp2wqefdXT6YNv7UNQx9ddPlXRo491w4PqosiysXfMmhEnaZwxs
-# tScj9dZm5uY7yHZDVcPVludGUkOxxJhEOhX2Xu6nFrha8knXWPMzbFLlMKe0XkuT
-# CQM+Tz4/j8yArNDuUmMCu2i3gJI/o/3+0W1K3E3R3GXlNqqIe0mq32YjQNfObIc5
-# MS2ca+FNaI9kM7Fh/BOuLW8rGGTtZKvMVvz0C6CqZeLGTX2mAH0B1CWFikGppMo1
-# KU7yIeZsNZntzhGtx6nSrqDpBoxw2fIACMR7VOEtF/mF7fa/AAGfSqrSk+k0fxGC
-# oFoqzV59rQsc/8H6CI7Dea4ooyV63FG1I53p5eWnulaK839Wyny6NrODIuZZFulZ
-# DIlheqNdODciLRmjlNVsZdVIum8lR0nay9h8LLnAZkiXgzbXwxmypawt4RjMeg1I
-# a2bLhviMx08xrq6wXdDo97rS1hKIc6fXyEIyesw/cD+Hxtctvq2Cg14jK9ehMXuD
-# iA5QM98kGQEc1GELnAc62RKnygJlWDQtjFbGBKGCDyowgg8mBgorBgEEAYI3AwMB
-# MYIPFjCCDxIGCSqGSIb3DQEHAqCCDwMwgg7/AgEDMQ0wCwYJYIZIAWUDBAIBMIGJ
+# AQQBgjcCAQsxDjAMBgorBgEEAYI3AgEVMC8GCSqGSIb3DQEJBDEiBCAjqvuVEBFv
+# SGxOtBg9eAuHleHdIyuBd28iP1InsrQ3oTANBgkqhkiG9w0BAQEFAASCAgCDxzlV
+# rD5sOa0QesQA102170aqoBQ8pWcUSLBmTcZxcL1pV0IeUuOTeY/HCT7dBrPrgQfM
+# X2GuT5dw4VMVPmOvC1aEP8HqRZTpYVMf7Hem4ytjfNijgBcoMcuI2wfAdSACwlvZ
+# +pMlaQ1/Ii/RsGpNK2u9y2/ibJuT/NpR0lubIweELiNjHKxF9PTd7vdm28F3LAKV
+# x31IXDY3o3249QOXfHETvRRUEKScW9cDjUC9wnjNJTOiwKE753UNQF8YempfJFsD
+# NoujCFs/nJLiLjp5L5JJuLjBu4+dfH4/0il5JpGW1huPCTxnm7zcXGRwJq967bl7
+# 7y6ScCV156h2Mu3HwKIsq88wU6C3oNob3S3Ve+oM6zyQ49WnBHvM0n/oRyYtB/Xr
+# srhvQ2wQMOM1bIdS3rGIWs12HyGGPF41n2jJaClLIZ5YxCK3jQWpLwwyuEAp+M/6
+# ABTGxPNaWYdvGAdAb7x3vzpyU/AEHsJTS+iayqtL+c4VPwuNHT+SzQJiRHo+v3f+
+# dkJbK4ifzoD5KVGuFYs6bJ9FEk7TwQXoGESvKwOXNijruMvoB3eqsWMtIwGeCKCi
+# vVsFL9w5ALDluMA0+nB+P+8shzy8sh3WyUMcUzWhujFOd8XDlA7UE0mqJ6oNBoD/
+# yvj87QaiPQj8gM+HqN49vwCx2T4VWgDlNe1QQ6GCDygwgg8kBgorBgEEAYI3AwMB
+# MYIPFDCCDxAGCSqGSIb3DQEHAqCCDwEwgg79AgEDMQ0wCwYJYIZIAWUDBAIBMIGJ
 # BgsqhkiG9w0BCRABBKB6BHgwdgIBAQYMKwYBBAGCqTABAwYBMDEwDQYJYIZIAWUD
-# BAIBBQAEIOimfCLN/H3gqpDMROJCFBnre4eS+aIJyM6E7RIwQ32rAghiPpo2gKXh
-# JBgPMjAyNjEwMTQxNzA3MDBaMAMCAQECEAL0dO7RpSCGKZ99ob/nWQagggwAMIIE
+# BAIBBQAEIFf5ouyc9k8RA5Zo+w7KM2Pde741eRalkh58TOeLzqv2AghvzzoUdKAs
+# PRgPMjAyNjEwMTQyMDA4MDZaMAMCAQECEBvhax3e8gPmtShG5wtKm0ugggwAMIIE
 # /DCCAuSgAwIBAgIQH2sWYtIuG2xd8cDBoGAOODANBgkqhkiG9w0BAQsFADBzMQsw
 # CQYDVQQGEwJVUzEOMAwGA1UECAwFVGV4YXMxEDAOBgNVBAcMB0hvdXN0b24xETAP
 # BgNVBAoMCFNTTCBDb3JwMS8wLQYDVQQDDCZTU0wuY29tIFRpbWVzdGFtcGluZyBJ
@@ -1322,17 +1366,17 @@ if ($executionSucceeded -and -not $NoRetention) {
 # daAvJgTfe9MiL2nSBioYe/g5mHUSWAay/Ip1RQmQCvmF9sNfqlhJwkjy/1U1ibUk
 # TIUBX3HgymyQvqQTZLLys6pL2tCdWcjI9YuLw30rgZm8+K387L7ycUvqrmQ3ZJlu
 # jHl3r1hgV76s3WwMPgKk1bAEFMj+rRXimSC+Ev30hXZdqyMdl/il5Ksd0vhGMYIC
-# WTCCAlUCAQEwgYcwczELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVRleGFzMRAwDgYD
+# VzCCAlMCAQEwgYcwczELMAkGA1UEBhMCVVMxDjAMBgNVBAgMBVRleGFzMRAwDgYD
 # VQQHDAdIb3VzdG9uMREwDwYDVQQKDAhTU0wgQ29ycDEvMC0GA1UEAwwmU1NMLmNv
 # bSBUaW1lc3RhbXBpbmcgSXNzdWluZyBSU0EgQ0EgUjECEB9rFmLSLhtsXfHAwaBg
 # DjgwCwYJYIZIAWUDBAIBoIIBYTAaBgkqhkiG9w0BCQMxDQYLKoZIhvcNAQkQAQQw
-# HAYJKoZIhvcNAQkFMQ8XDTI2MTAxNDE3MDcwMFowKAYJKoZIhvcNAQk0MRswGTAL
-# BglghkgBZQMEAgGhCgYIKoZIzj0EAwIwLwYJKoZIhvcNAQkEMSIEIHpegIsfB+oN
-# W+If4p82Jz8adXCQ7MOdY4fGkiXCtml5MIHJBgsqhkiG9w0BCRACLzGBuTCBtjCB
+# HAYJKoZIhvcNAQkFMQ8XDTI2MTAxNDIwMDgwNlowKAYJKoZIhvcNAQk0MRswGTAL
+# BglghkgBZQMEAgGhCgYIKoZIzj0EAwIwLwYJKoZIhvcNAQkEMSIEIOBhS9QjpfN0
+# zyH52e5yE5upHn+Q5fFEQCTjdLp0LPubMIHJBgsqhkiG9w0BCRACLzGBuTCBtjCB
 # szCBsAQgVCr5oWqNci5mEUl4iumUwYqaruWmXLNEolSa+Wx5x4swgYswd6R1MHMx
 # CzAJBgNVBAYTAlVTMQ4wDAYDVQQIDAVUZXhhczEQMA4GA1UEBwwHSG91c3RvbjER
 # MA8GA1UECgwIU1NMIENvcnAxLzAtBgNVBAMMJlNTTC5jb20gVGltZXN0YW1waW5n
 # IElzc3VpbmcgUlNBIENBIFIxAhAfaxZi0i4bbF3xwMGgYA44MAoGCCqGSM49BAMC
-# BEgwRgIhAPtEaxsufYxFxozL8IKG8HHvXi0TNydmhGfM3wpR6ADQAiEA1JJaqhEE
-# q88h1Xsnwl81N+1cSHPYfwHR4zPUsa7PwrM=
+# BEYwRAIgUa7IqnJFT4K25/qatvdOw3W3fLe/NxAgLqtWQqPP/zQCIF+CvFCpoXEo
+# 2NA3YvBlFk56hkLaa/Lx7t7qhKrVRMor
 # SIG # End signature block

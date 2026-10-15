@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1120 340" role="img" aria-labelledby="title description">
+  <title id="title">M365 Groups Reporting — Nicolas Fabert</title>
+  <desc id="description">Read-only groups, owners, members and SharePoint URLs. Restartable SQLite snapshots, CSV and HTML. Version 1.0.0, PowerShell 7.4 or later, MIT.</desc>
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffffff"/><stop offset="1" stop-color="#f8eef2"/></linearGradient></defs>
+  <rect x="1" y="3" width="1118" height="335" rx="22" fill="url(#bg)" stroke="#dddddd"/>
+  <path d="M24 4H1096" stroke="#b51b4b" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="1030" cy="78" r="150" fill="none" stroke="#b51b4b" stroke-opacity=".08" stroke-width="46"/>
+  <rect x="38" y="45" width="66" height="66" rx="18" fill="#b51b4b"/>
+  <g transform="translate(52 57)" fill="none" stroke="#ffffff" stroke-width="2.8" stroke-linecap="round">
+    <circle cx="13" cy="10" r="7"/><circle cx="31" cy="14" r="5"/><path d="M1 35c0-17 24-17 24 0M27 26c10-4 16 3 16 11"/>
+  </g>
+  <g font-family="Segoe UI,Arial,sans-serif">
+    <text x="125" y="65" font-size="17" font-weight="700" letter-spacing="1.5" fill="#b51b4b">MICROSOFT 365 · GROUPS · SHAREPOINT</text>
+    <text x="125" y="107" font-size="39" font-weight="700" fill="#242424">M365 Groups Reporting</text>
+    <text x="38" y="164" font-size="21" fill="#242424">Groups, owners, members and SharePoint site URLs.</text>
+    <text x="38" y="200" font-size="21" fill="#242424">A restartable SQLite snapshot, exported as CSV and HTML.</text>
+    <rect x="38" y="235" width="119" height="36" rx="18" fill="#b51b4b"/>
+    <text x="55" y="259" font-size="16" font-weight="700" fill="#ffffff">Version 1.0.0</text>
+    <rect x="169" y="235" width="167" height="36" rx="18" fill="#ffffff" stroke="#dddddd"/>
+    <text x="187" y="259" font-size="16" fill="#555555">PowerShell 7.4+</text>
+    <rect x="348" y="235" width="104" height="36" rx="18" fill="#ffffff" stroke="#dddddd"/>
+    <text x="369" y="259" font-size="16" fill="#555555">SQLite</text>
+    <rect x="464" y="235" width="126" height="36" rx="18" fill="#ffffff" stroke="#dddddd"/>
+    <text x="483" y="259" font-size="16" fill="#555555">MIT license</text>
+    <text x="38" y="308" font-size="17" fill="#555555">Nicolas Fabert · Collect → Reconcile → Seal → Report</text>
+    <g>
+      <rect x="799" y="45" width="283" height="77" rx="16" fill="#ffffff" stroke="#dddddd"/>
+      <text x="820" y="94" font-size="32" font-weight="700" fill="#b51b4b">1</text>
+      <text x="866" y="77" font-size="17" font-weight="700" fill="#242424">restartable snapshot</text>
+      <text x="866" y="103" font-size="15" fill="#555555">complete before export</text>
+      <rect x="799" y="134" width="283" height="77" rx="16" fill="#ffffff" stroke="#dddddd"/>
+      <text x="820" y="183" font-size="32" font-weight="700" fill="#b51b4b">2</text>
+      <text x="866" y="166" font-size="17" font-weight="700" fill="#242424">report formats</text>
+      <text x="866" y="192" font-size="15" fill="#555555">CSV + self-contained HTML</text>
+      <rect x="799" y="223" width="283" height="77" rx="16" fill="#ffffff" stroke="#dddddd"/>
+      <text x="820" y="272" font-size="32" font-weight="700" fill="#b51b4b">0</text>
+      <text x="866" y="255" font-size="17" font-weight="700" fill="#242424">tenant changes</text>
+      <text x="866" y="281" font-size="15" fill="#555555">read-only collection</text>
+    </g>
+  </g>
+</svg>

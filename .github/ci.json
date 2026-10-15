@@ -1,0 +1,19 @@
+{
+  "runtimeRoot": ".",
+  "runtimeReadme": "docs/runtime-README.md",
+  "testMode": "pester",
+  "testEntry": null,
+  "tests": [
+    "tests/Invoke-M365GroupsReporting.Tests.ps1",
+    "tests/GroupInventory.Engine.Tests.ps1",
+    "tests/M365GroupsReporting.Parity.Tests.ps1",
+    "tests/PackageIntegrity.Tests.ps1"
+  ],
+  "packageBuilder": "tools/New-GroupInventoryPackage.ps1",
+  "packageEntry": "Invoke-M365GroupsReporting.ps1",
+  "powerShellEditions": ["Core"],
+  "minimumPowerShellVersion": "7.4",
+  "packageStage": "Prepare",
+  "editableConfiguration": ["config/M365GroupsReporting.config.psd1"],
+  "sourceDevelopmentOnly": true
+}

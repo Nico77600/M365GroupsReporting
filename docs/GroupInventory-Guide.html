@@ -156,15 +156,14 @@ footer { margin-top: 48px; padding-top: 20px; border-top: 1px solid var(--cp-bor
 }
 </style></head><body>
 <aside><div class="brand"><div class="brand-logo"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div><div><div class="brand-name">M365GroupsReporting</div><div class="brand-sub">Administrator guide · v1.0.0</div></div></div>
-<nav aria-label="Contents"><a href="#installation-and-quick-start" data-target="installation-and-quick-start"><span class="nav-badge">1</span><span class="nav-text">Installation and quick start</span></a><a href="#configuration-and-paths" data-target="configuration-and-paths"><span class="nav-badge">2</span><span class="nav-text">Configuration and paths</span></a><a href="#authentication-and-permissions" data-target="authentication-and-permissions"><span class="nav-badge">3</span><span class="nav-text">Authentication and permissions</span></a><a href="#collection-resume-and-retention" data-target="collection-resume-and-retention"><span class="nav-badge">4</span><span class="nav-text">Collection, resume and retention</span></a><a href="#csv-and-html" data-target="csv-and-html"><span class="nav-badge">5</span><span class="nav-text">CSV and HTML</span></a><a href="#development-and-validation" data-target="development-and-validation"><span class="nav-badge">6</span><span class="nav-text">Development and validation</span></a><a href="#safe-delivery-and-remaining-qualifications" data-target="safe-delivery-and-remaining-qualifications"><span class="nav-badge">7</span><span class="nav-text">Safe delivery and remaining qualifications</span></a></nav></aside>
+<nav aria-label="Contents"><a href="#installation-and-quick-start" data-target="installation-and-quick-start"><span class="nav-badge">1</span><span class="nav-text">Installation and quick start</span></a><a href="#configuration-and-paths" data-target="configuration-and-paths"><span class="nav-badge">2</span><span class="nav-text">Configuration and paths</span></a><a href="#authentication-and-permissions" data-target="authentication-and-permissions"><span class="nav-badge">3</span><span class="nav-text">Authentication and permissions</span></a><a href="#collection-resume-and-retention" data-target="collection-resume-and-retention"><span class="nav-badge">4</span><span class="nav-text">Collection, resume and retention</span></a><a href="#csv-and-html" data-target="csv-and-html"><span class="nav-badge">5</span><span class="nav-text">CSV and HTML</span></a><a href="#development-and-validation" data-target="development-and-validation"><span class="nav-badge">6</span><span class="nav-text">Development and validation</span></a><a href="#safe-delivery-and-remaining-qualifications" data-target="safe-delivery-and-remaining-qualifications"><span class="nav-badge">7</span><span class="nav-text">Safe delivery and remaining qualifications</span></a><a href="#disclaimer" data-target="disclaimer"><span class="nav-badge"><svg class="icon-xs" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m10 8 6 4-6 4z"/></svg></span><span class="nav-text">Disclaimer</span></a></nav></aside>
 <main><header class="hero" id="top"><div class="hero-top"><div class="hero-logo"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div><div><div class="eyebrow">Administrator guide</div><h1>M365GroupsReporting</h1></div><button type="button" id="theme" class="ghost" title="Light / dark"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4 8 8 0 1 0 20 14.5z"/></svg></button></div><div class="badges"><span class="badge badge-accent">Version 1.0.0</span><span class="badge"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/></svg>Updated 2026-10-14</span><span class="badge"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Nicolas Fabert</span><span class="badge"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3M13 15h4"/></svg>PowerShell 7.4+</span><span class="badge"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg>Read-only for Microsoft 365</span></div><p class="lead">A complete, fail-closed inventory of Microsoft 365 groups, owners, members and SharePoint site URLs.</p>
 <div class="cards"><div class="card-item"><div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v13c0 1.7 3.6 3 8 3s8-1.3 8-3v-13"/><path d="M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></svg></div><div><div class="card-title">Durable snapshots</div><div class="card-text">SQLite checkpoints, one bounded writer, reconciliation before sealing.</div></div></div><div class="card-item"><div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18"/><path d="M6 16v-5M11 16V6M16 16v-8"/></svg></div><div><div class="card-title">Self-contained reports</div><div class="card-text">CSV and a single HTML file with complete relations, filters and a virtualized grid.</div></div></div><div class="card-item"><div class="card-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 4 6v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V6z"/><path d="m9 12 2 2 4-4"/></svg></div><div><div class="card-title">External credentials</div><div class="card-text">Explicit authentication modes; secrets never enter the engine or package.</div></div></div></div>
 </header><section class="section" id="installation-and-quick-start"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M4 20h16"/></svg></div><div><div class="section-eyebrow">Chapter 1</div><h2>Installation and quick start</h2></div></div><div class="section-body">
 <p>Use PowerShell 7.4+ on Windows x64 or arm64. The delivery package contains a compiled .NET 8 engine
 and SQLite dependencies under <code>lib\engine</code>; no SDK or download is needed to run it.
 Developers need an installed .NET SDK plus the .NET 8 targeting pack or runtime to build offline.</p>
-<div class="code"><div class="code-head"><span>PowerShell</span><button type="button" class="copy"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy</span></button></div><pre><code>.\Build-Engine.ps1                       # Development only
-.\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv
+<div class="code"><div class="code-head"><span>PowerShell</span><button type="button" class="copy"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy</span></button></div><pre><code>.\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv
 .\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv -Format HTML
 .\Invoke-M365GroupsReporting.ps1 -ResumeRun .\data\run_20260101_120000 -OverwriteExport
 Get-Help .\Invoke-M365GroupsReporting.ps1 -Full
@@ -174,6 +173,9 @@ A valid SharePoint <code>GroupId,Url</code> source is required for a new run; an
 <code>Get-SiteUrls.ps1</code> collects <code>GROUP#0</code> sites. Its interactive SharePoint route requires Windows
 PowerShell 5.1 and <code>Microsoft.Online.SharePoint.PowerShell</code>, modern authentication and an admin URL.
 It remains unqualified outside the existing lab; a prepared site CSV is the recommended route.</p>
+<p>The commands above run a finalized release package. For a source Git checkout, first run
+<code>.\Build-Engine.ps1</code>, then pass <code>-SourceDevelopment</code> to either source entry point. That explicit
+unauthenticated mode is rejected in runtime artifacts and is never a release-validation result.</p>
 </div></section><section class="section" id="configuration-and-paths"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h9M17 6h3M4 12h3M11 12h9M4 18h11M19 18h1"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg></div><div><div class="section-eyebrow">Chapter 2</div><h2>Configuration and paths</h2></div></div><div class="section-body">
 <p>Edit <code>config\M365GroupsReporting.config.psd1</code>. Like the actual PurviewDlpReport importer,
 all relative paths are resolved from the <strong>tool root</strong>, even for a configuration elsewhere.
@@ -266,7 +268,9 @@ JWT assertions expire after five minutes. No secret or private key is placed on 
 <li><strong>ClientSecretFile:</strong> the compatibility/lab mode, with an external protected JSON file containing
 <code>TenantId</code>, <code>ClientId</code> and <code>ClientSecret</code>. <code>Authentication.CredentialsPath</code> or <code>-CredFile</code> references
 the file; it is never copied into runs, packages or the engine. Protect it with user-only NTFS ACLs.
-Configured tenant/application identities must match the file.</li>
+Configured tenant/application identities must match the file.
+Prefer a location outside the tool folder. The exact compatibility name <code>app_creds.json</code> and
+the collector's default <code>siteurls.csv</code> are mutable inputs, never hashed code or distributed assets.</li>
 <li><strong>ClientSecretEnvironment:</strong> another compatibility/lab mode; configure tenant/application IDs and an environment variable named by
 <code>Authentication.SecretEnvironmentVariable</code> (default <code>M365_GROUPS_CLIENT_SECRET</code>). Provision it through
 a protected process environment, not through a literal command in shell history.</li>
@@ -326,7 +330,7 @@ Invoke-Pester -Path .\tests\Invoke-M365GroupsReporting.Tests.ps1,.\tests\GroupIn
 $env:GROUP_INVENTORY_BENCH_OBJECTS = 400000
 Invoke-Pester -Path .\tests\GroupInventory.Engine.Tests.ps1
 .\tools\Build-Documentation.ps1
-.\tools\New-GroupInventoryPackage.ps1 -Destination C:\Scripts\package\M365GroupsReporting-1.0.0
+.\tools\New-GroupInventoryPackage.ps1 -Stage Prepare -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
 </code></pre></div>
 <p>Tests are offline, synthetic and use existing Pester tooling. Never point validation at tenant runs.
 The large benchmark creates 20,000 groups, 40,000 owners and 340,000 members with 32 producers.</p>
@@ -337,18 +341,53 @@ company/environment values, output/storage/log paths and branding. Tenant displa
 All text is scanned for original tenant/branding values, literal secrets, JWTs and private keys.
 The destination must be outside the source and not its ancestor; junction/symlink paths are refused.
 Executed destinations, databases, run/data/report/log/bin folders and unknown destinations cannot be
-replaced with <code>-Force</code>. Failed scanning does not change an existing package. Nothing is published.</p>
-<p>Certificate mode was live-qualified on 2026-10-14 using a dedicated registered RSA certificate with
-Client Authentication EKU and the existing SharePoint CSV source. The bounded sample sealed 100 groups
-with 200 complete owner/member lists, zero failed lists or reconciliation mismatches, and exported CSV
-and single-file HTML. The previous certificate credential, client secret, permissions/consent and
-historical full-run snapshot were preserved. The private key remains in the current user's certificate
-store; the lab override is outside the project/package.
-This does not qualify certificate mode at full-tenant scale; environment-secret mode still needs live qualification.
+replaced with <code>-Force</code>. Failed scanning does not change an existing package. The package builder never publishes.</p>
+<p>Offline synthetic tests do not qualify certificate or environment-secret authentication at full-tenant
+scale. Tenant qualification evidence, credentials, certificate stores and lab overrides are private and
+outside the public repository and package.
 The interactive SharePoint path remains lab-only; snapshot semantics and inventory-specific fields
 are accepted domain differences, not omissions of the Purview baseline.</p>
+<h3 id="signed-package-integrity">Signed package integrity</h3>
+<p>The source layout remains at the root to preserve build procedures. A Git checkout is explicitly
+<strong>source development</strong>, not an authenticated runtime distribution. Use <code>-SourceDevelopment</code> only in
+that checkout; packaged artifacts reject it. Source engine output is deliberately unauthenticated,
+and must never be substituted for a signed release.</p>
+<p>The independently signed <code>Test-PackageIntegrity.ps1</code> uses the public Purview verifier's trust pattern:
+valid timestamped owner signature, trusted signer <code>0F28E442889F17B5F4D251E8F96E7CC6E2C9C6D6</code>,
+authentication of the raw PSD1 before parsing, an exact allow-listed inventory, raw SHA256 hashes,
+script-signature checks and rejection of protected reparse points or unexpected stable files.
+Both entry points verify before business logic; the engine loader verifies again before assembly load.
+Vendor DLLs keep their original bytes and authorship; manifest authentication protects the actual
+compiled <code>lib\engine\GroupInventory.Engine.dll</code>, SQLite managed/native dependencies and templates.
+README, license, third-party notices, guides and named public images are also immutable.</p>
+<p>Only <code>config\M365GroupsReporting.config.psd1</code> is excluded from the immutable inventory. Runtime
+<code>data</code>, <code>logs</code>, <code>reports</code> and the execution marker are not loaded as code. Source, CI, tests, labs,
+credentials, databases, logs, backups and SDK intermediates are not packaged.</p>
+<p><strong>Signing preparation is not successful authentication.</strong> The source manifest describes source
+paths and is regenerated after source bytes are frozen; it is never copied into a relocated package.
+The package manifest is created from the actual staged runtime bytes after configuration sanitization
+and DLL/template copying. The owner must approve and sign the exact staged scripts first:</p>
+<div class="code"><div class="code-head"><span>PowerShell</span><button type="button" class="copy"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></svg><span>Copy</span></button></div><pre><code>.\tools\New-GroupInventoryPackage.ps1 -Stage Prepare -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
+# Owner approval, exact script signing and timestamping happen separately.
+.\tools\New-GroupInventoryPackage.ps1 -Stage RefreshManifest -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
+# Owner signs and timestamps the newly generated manifest separately.
+.\tools\New-GroupInventoryPackage.ps1 -Stage Finalize -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
+</code></pre></div>
+<p>RefreshManifest requires trusted timestamped script signatures. Finalize independently authenticates
+the manifest and all package bytes before removing <code>.publication-pending</code>. Pending artifacts cannot
+run. There is no unsigned production fallback, signature bypass or automatic trust-root import.
+Chain/revocation validation may need issuer services; an unavailable trusted chain blocks delivery.
+Do not edit immutable files after manifest generation or signing. Certificate rotation requires owner
+review of every pinned trust boundary and a new version; never replace published assets.</p>
+<p>Raw Git blobs must be checked independently after the owner freezes signed source bytes. Local native
+signature checks, offline mocks, rendered visual approval, hosted CI and live GitHub security settings
+are separate gates. This candidate does not claim that any pending gate has passed.</p>
+</div></section><section class="section" id="disclaimer"><div class="section-head"><div class="section-icon"><svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg></div><div><div class="section-eyebrow">Start here</div><h2>Disclaimer</h2></div></div><div class="section-body">
+<p>This Script is a Personal project.
+It's provided &quot;AS-IS&quot;. It's not an official Microsoft product so no support can be expected from Microsoft.</p>
+<p>As any scripts you must read carefully the documentation and test it first in a Test environment before any run in Production.</p>
 </div></section>
-<footer>M365GroupsReporting 1.0.0 · Nicolas Fabert · generated 2026-10-14 13:42 from GroupInventory-Guide.md</footer></main>
+<footer>M365GroupsReporting 1.0.0 · Nicolas Fabert · generated 2026-10-14 21:25 from GroupInventory-Guide.md</footer></main>
 <button type="button" id="to-top" title="Back to top"><svg class="icon-sm" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m6 14 6-6 6 6"/></svg></button>
 <dialog id="zoom"><img alt=""></dialog>
 <script>

@@ -23,7 +23,6 @@ and SQLite dependencies under `lib\engine`; no SDK or download is needed to run 
 Developers need an installed .NET SDK plus the .NET 8 targeting pack or runtime to build offline.
 
 ```powershell
-.\Build-Engine.ps1                       # Development only
 .\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv
 .\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv -Format HTML
 .\Invoke-M365GroupsReporting.ps1 -ResumeRun .\data\run_20260101_120000 -OverwriteExport
@@ -35,6 +34,10 @@ A valid SharePoint `GroupId,Url` source is required for a new run; an empty sour
 `Get-SiteUrls.ps1` collects `GROUP#0` sites. Its interactive SharePoint route requires Windows
 PowerShell 5.1 and `Microsoft.Online.SharePoint.PowerShell`, modern authentication and an admin URL.
 It remains unqualified outside the existing lab; a prepared site CSV is the recommended route.
+
+The commands above run a finalized release package. For a source Git checkout, first run
+`.\Build-Engine.ps1`, then pass `-SourceDevelopment` to either source entry point. That explicit
+unauthenticated mode is rejected in runtime artifacts and is never a release-validation result.
 
 <!-- icon: settings -->
 ## 2. Configuration and paths
@@ -87,6 +90,8 @@ Choose `Authentication.Mode` (or `-AuthMode`) explicitly:
   `TenantId`, `ClientId` and `ClientSecret`. `Authentication.CredentialsPath` or `-CredFile` references
   the file; it is never copied into runs, packages or the engine. Protect it with user-only NTFS ACLs.
   Configured tenant/application identities must match the file.
+  Prefer a location outside the tool folder. The exact compatibility name `app_creds.json` and
+  the collector's default `siteurls.csv` are mutable inputs, never hashed code or distributed assets.
 * **ClientSecretEnvironment:** another compatibility/lab mode; configure tenant/application IDs and an environment variable named by
   `Authentication.SecretEnvironmentVariable` (default `M365_GROUPS_CLIENT_SECRET`). Provision it through
   a protected process environment, not through a literal command in shell history.
@@ -168,7 +173,7 @@ Invoke-Pester -Path .\tests\Invoke-M365GroupsReporting.Tests.ps1,.\tests\GroupIn
 $env:GROUP_INVENTORY_BENCH_OBJECTS = 400000
 Invoke-Pester -Path .\tests\GroupInventory.Engine.Tests.ps1
 .\tools\Build-Documentation.ps1
-.\tools\New-GroupInventoryPackage.ps1 -Destination C:\Scripts\package\M365GroupsReporting-1.0.0
+.\tools\New-GroupInventoryPackage.ps1 -Stage Prepare -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
 ```
 
 Tests are offline, synthetic and use existing Pester tooling. Never point validation at tenant runs.
@@ -183,14 +188,62 @@ company/environment values, output/storage/log paths and branding. Tenant displa
 All text is scanned for original tenant/branding values, literal secrets, JWTs and private keys.
 The destination must be outside the source and not its ancestor; junction/symlink paths are refused.
 Executed destinations, databases, run/data/report/log/bin folders and unknown destinations cannot be
-replaced with `-Force`. Failed scanning does not change an existing package. Nothing is published.
+replaced with `-Force`. Failed scanning does not change an existing package. The package builder never publishes.
 
-Certificate mode was live-qualified on 2026-10-14 using a dedicated registered RSA certificate with
-Client Authentication EKU and the existing SharePoint CSV source. The bounded sample sealed 100 groups
-with 200 complete owner/member lists, zero failed lists or reconciliation mismatches, and exported CSV
-and single-file HTML. The previous certificate credential, client secret, permissions/consent and
-historical full-run snapshot were preserved. The private key remains in the current user's certificate
-store; the lab override is outside the project/package.
-This does not qualify certificate mode at full-tenant scale; environment-secret mode still needs live qualification.
+Offline synthetic tests do not qualify certificate or environment-secret authentication at full-tenant
+scale. Tenant qualification evidence, credentials, certificate stores and lab overrides are private and
+outside the public repository and package.
 The interactive SharePoint path remains lab-only; snapshot semantics and inventory-specific fields
 are accepted domain differences, not omissions of the Purview baseline.
+
+### Signed package integrity
+
+The source layout remains at the root to preserve build procedures. A Git checkout is explicitly
+**source development**, not an authenticated runtime distribution. Use `-SourceDevelopment` only in
+that checkout; packaged artifacts reject it. Source engine output is deliberately unauthenticated,
+and must never be substituted for a signed release.
+
+The independently signed `Test-PackageIntegrity.ps1` uses the public Purview verifier's trust pattern:
+valid timestamped owner signature, trusted signer `0F28E442889F17B5F4D251E8F96E7CC6E2C9C6D6`,
+authentication of the raw PSD1 before parsing, an exact allow-listed inventory, raw SHA256 hashes,
+script-signature checks and rejection of protected reparse points or unexpected stable files.
+Both entry points verify before business logic; the engine loader verifies again before assembly load.
+Vendor DLLs keep their original bytes and authorship; manifest authentication protects the actual
+compiled `lib\engine\GroupInventory.Engine.dll`, SQLite managed/native dependencies and templates.
+README, license, third-party notices, guides and named public images are also immutable.
+
+Only `config\M365GroupsReporting.config.psd1` is excluded from the immutable inventory. Runtime
+`data`, `logs`, `reports` and the execution marker are not loaded as code. Source, CI, tests, labs,
+credentials, databases, logs, backups and SDK intermediates are not packaged.
+
+**Signing preparation is not successful authentication.** The source manifest describes source
+paths and is regenerated after source bytes are frozen; it is never copied into a relocated package.
+The package manifest is created from the actual staged runtime bytes after configuration sanitization
+and DLL/template copying. The owner must approve and sign the exact staged scripts first:
+
+```powershell
+.\tools\New-GroupInventoryPackage.ps1 -Stage Prepare -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
+# Owner approval, exact script signing and timestamping happen separately.
+.\tools\New-GroupInventoryPackage.ps1 -Stage RefreshManifest -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
+# Owner signs and timestamps the newly generated manifest separately.
+.\tools\New-GroupInventoryPackage.ps1 -Stage Finalize -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
+```
+
+RefreshManifest requires trusted timestamped script signatures. Finalize independently authenticates
+the manifest and all package bytes before removing `.publication-pending`. Pending artifacts cannot
+run. There is no unsigned production fallback, signature bypass or automatic trust-root import.
+Chain/revocation validation may need issuer services; an unavailable trusted chain blocks delivery.
+Do not edit immutable files after manifest generation or signing. Certificate rotation requires owner
+review of every pinned trust boundary and a new version; never replace published assets.
+
+Raw Git blobs must be checked independently after the owner freezes signed source bytes. Local native
+signature checks, offline mocks, rendered visual approval, hosted CI and live GitHub security settings
+are separate gates. This candidate does not claim that any pending gate has passed.
+
+<!-- icon: info -->
+## Disclaimer
+
+This Script is a Personal project.
+It's provided "AS-IS". It's not an official Microsoft product so no support can be expected from Microsoft.
+
+As any scripts you must read carefully the documentation and test it first in a Test environment before any run in Production.

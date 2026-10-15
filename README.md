@@ -1,170 +1,140 @@
-# M365GroupsReporting (groups, owners, members, SharePoint site URLs)
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/readme-banner-dark.svg">
+    <img alt="M365 Groups Reporting: groups, owners, members and SharePoint site URLs; a restartable SQLite snapshot, CSV and HTML, read-only Microsoft 365 inventory. By Nicolas Fabert." src="docs/images/readme-banner-light.svg">
+  </picture>
+</p>
 
-PowerShell 7.4+ orchestrator + offline C# engine (.NET 8, SQLite) that produces a **CSV or HTML** inventory of the
-Microsoft 365 (Unified) groups of a tenant. Sized for **at least 400,000 cumulative objects** (groups + owners + members).
+<p align="center"><b>By Nicolas Fabert</b> &middot; Version 1.0.0 &middot; PowerShell 7.4+ &middot; MIT</p>
+<p align="center">
+  <a href="#why"><b>Why</b></a> &middot;
+  <a href="#how-it-works"><b>How it works</b></a> &middot;
+  <a href="#reports"><b>Reports</b></a> &middot;
+  <a href="#quick-start"><b>Quick start</b></a> &middot;
+  <a href="docs/GroupInventory-Guide.md"><b>Guide</b></a>
+</p>
 
-* **PowerShell** (`Invoke-M365GroupsReporting.ps1`) owns configuration, authentication and every Graph / SharePoint call.
-* **Configuration** (`config\M365GroupsReporting.config.psd1`) follows the PurviewDlpReport pattern: operational settings
-  and retention are centralized; secrets remain external through explicit authentication modes.
-* **Integrity** (`M365GroupsReporting.PackageIntegrity.psd1`) records SHA-256 hashes for the public runtime,
-  source contract and bundled SQLite DLLs; the manifest is Authenticode-signed and RFC3161-timestamped.
-* **The engine** (`src\`, `GroupInventory.Engine.dll`) is passive and offline: it never receives a credential or a token.
-  It owns staging in a durable SQLite database, checkpoints, de-duplication, reconciliation, sealing and the streaming exports.
-* **Fail-closed**: if any source, page, worker or list is incomplete, or a count does not reconcile, the run is **not sealed**
-  and **no final file is produced**. Owners/members are never assumed empty.
-* A SharePoint source with no valid `GROUP#0` rows is rejected; a group returning HTTP 404 during list collection is
-  removed only after a direct group re-check confirms that it disappeared.
+> [!IMPORTANT]
+> This correction is a **signing preparation**, not an authenticated release. No release is published by this preparation. Use a reviewed, signed release ZIP for operational runs; the Git checkout is a source-development workspace.
+>
+> Review the publisher and trusted certificate chain before unblocking downloaded files. Follow your organization's execution policy; never disable signature or integrity checks to resolve an error.
+>
+> ```powershell
+> Get-ChildItem "C:\Path\To\ExtractedPackage" -Recurse -File -Force | Unblock-File
+> ```
 
-Parity changes are validated offline (fake Graph, synthetic data), without altering existing tenant/lab snapshots.
-No signing, commit or publication is part of this work.
+## Why
+
+Administrators need to know **which Microsoft 365 groups exist, who owns them, who belongs to them, and where their SharePoint site is**. This inventory gives them those facts without changing the tenant. Ownerless groups, Teams-backed groups and visibility are explicit, rather than hidden in an incomplete membership export.
+
+## How it works
+
+| Step | What happens |
+|---|---|
+| **Collect** | PowerShell reads Unified groups, owners and members from Microsoft Graph. A pre-collected `GroupId,Url` CSV supplies SharePoint URLs, or a separate SharePoint administrator session collects them. |
+| **Keep a snapshot** | The offline .NET 8 engine streams pages into SQLite through a bounded writer. Checkpoints permit interrupted runs to resume without treating failed lists as empty. |
+| **Reconcile and seal** | Every required source and relation list must complete. Failed requests, missing pages and reconciliation mismatches prevent sealing and final reports. |
+| **Report** | A sealed snapshot becomes CSV and self-contained HTML. Re-export needs no Microsoft 365 connection. |
+
+Microsoft 365 access is **read-only**. The tool does not change groups, memberships or tenant settings. A snapshot describes a collection interval, not a transactionally consistent instant.
+
+## Reports
+
+<table>
+  <tr>
+    <td width="50%" valign="top"><a href="docs/images/report-overview.png"><img alt="Rendered HTML inventory overview using synthetic groups only" src="docs/images/report-overview.png"></a><br><sub><b>Overview</b> &middot; counts, distributions, ranking, search and field filters</sub></td>
+    <td width="50%" valign="top"><a href="docs/images/report-details.png"><img alt="Rendered details of a synthetic Microsoft 365 group" src="docs/images/report-details.png"></a><br><sub><b>Group details</b> &middot; full owners and members, identity and SharePoint URL</sub></td>
+  </tr>
+</table>
+
+These previews are rendered from **synthetic data only** (`example.test`), never tenant reports.
+
+- **CSV**: UTF-8 with BOM, configurable delimiter, spreadsheet formula protection by default; `displayName`, `alias`, `primarySmtpAddress`, `groupType`, `sharePointUrl`, `visibility`, `externalDirectoryObjectId`, `owners`, `members`, `ownersCount`, `membersCount`, `ownerless`.
+- **HTML**: light/dark themes, summary cards, distribution and rankings, search, inventory field and owner/member filters, sorting, virtual scrolling, group details and filtered CSV export. Full relation lists remain embedded even when the grid preview is capped.
+- **Large inventories**: one self-contained compressed report by default; `-HtmlPartitioned` enables an index and part files. `-SkipMembers` means *not collected*, never a false zero.
+
+## Requirements
+
+| Item | Requirement |
+|---|---|
+| Runtime | Windows and PowerShell **7.4+** (.NET 8 orchestration); Windows PowerShell 5.1 cannot run the inventory engine |
+| Authentication | Prefer a registered application certificate; external credential-file and environment-secret modes remain supported compatibility modes |
+| Graph access | Consented read permissions for groups and the directory object types collected; see the [permission guide](docs/GroupInventory-Guide.md#3-authentication-and-permissions) |
+| SharePoint URLs | Existing `GroupId,Url` CSV, or Windows PowerShell 5.1 with `Microsoft.Online.SharePoint.PowerShell` and a SharePoint administrator session |
+| Dependencies | Engine and original SQLite binaries are bundled in the release ZIP; no .NET SDK is needed to run it |
+| Development only | .NET SDK 8+ with a .NET 8 targeting pack or installed .NET 8 runtime, Pester 5+ and PSScriptAnalyzer |
 
 ## Quick start
 
+### Get started: release ZIP
+
+Download a reviewed release from [Releases](https://github.com/Nico77600/M365GroupsReporting/releases), extract it, review its signatures, then edit **only** the configuration. The pending candidate is not ready for this path.
+
 ```powershell
-.\Build-Engine.ps1                                             # offline build of engine\bin (no download)
-.\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv        # CSV + single-file HTML; external credentials
-.\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv .\siteurls.csv -Format HTML
-.\Invoke-M365GroupsReporting.ps1 -ResumeRun .\run_20260101_120000 -SiteUrlsCsv .\siteurls.csv    # continue an interrupted/incomplete run
+Set-Location C:\Tools\M365GroupsReporting
+notepad .\config\M365GroupsReporting.config.psd1
+.\Invoke-M365GroupsReporting.ps1 -SiteUrlsCsv C:\InventoryInput\siteurls.csv
+.\Invoke-M365GroupsReporting.ps1 -ResumeRun .\data\run_YYYYMMDD_HHMMSS -NoRetention
 ```
 
-Edit `config\M365GroupsReporting.config.psd1` to change database/log/report paths, concurrency, branding,
-formats, delimiter, time zone and retention. Relative paths resolve from the tool root, exactly like PurviewDlpReport,
-not from `config\`. Command-line parameters override configuration for one execution.
-See the [administrator guide](docs/GroupInventory-Guide.md) or generated `docs\GroupInventory-Guide.html`.
+The independent signed verifier authenticates the signed manifest **before parsing it**, checks every immutable raw SHA256 byte sequence (including the compiled engine DLL, native SQLite, templates, README and guides), and checks timestamped owner signatures. Missing, changed, untrusted or unexpected stable files fail **before assembly or native loading**. Expected owner signer: `0F28E442889F17B5F4D251E8F96E7CC6E2C9C6D6`.
 
-For a clean delivery directory (without credentials, databases, runs or build intermediates):
+The exact compatibility input names `siteurls.csv` and `app_creds.json` are mutable data, never executable authority or distributed assets. Prefer a protected credentials file outside the tool folder; unknown code or documentation is not exempt.
+
+### Source development: not a release
+
+The source layout stays at the root to preserve existing build and installation paths; packaging maps only approved files into the existing `lib\engine` runtime layout. There is no wholesale move of deployment directories.
 
 ```powershell
+git clone https://github.com/Nico77600/M365GroupsReporting.git
+Set-Location M365GroupsReporting
+.\Build-Engine.ps1
+.\Invoke-M365GroupsReporting.ps1 -SourceDevelopment -SiteUrlsCsv C:\InventoryInput\siteurls.csv
+```
+
+`-SourceDevelopment` is restricted to a Git source checkout containing the engine project and sources. It cannot run a packaged or pending artifact. It emits an explicit unauthenticated-development warning; it is not evidence of release authentication.
+
+## Content
+
+| Source item | Runtime purpose |
+|---|---|
+| `Invoke-M365GroupsReporting.ps1`, `Get-SiteUrls.ps1` | Inventory and optional SharePoint entry points |
+| `Test-PackageIntegrity.ps1` | Independently authenticated runtime verifier |
+| `config\` | Editable operational configuration, excluded from immutable hashes |
+| `src\`, `engine\`, `Build-Engine.ps1` | Source development only; compiled output maps to runtime `lib\engine` |
+| `templates\`, `docs\`, `lib\sqlite\` | Report template, guides and original SQLite dependencies |
+| `tools\`, `tests\`, `.github\` | Development, offline tests and hosted validation; not shipped |
+
+## Documentation
+
+| Document | Content |
+|---|---|
+| **[Administrator and developer guide](docs/GroupInventory-Guide.md)** | Setup, every configuration field, authentication, permissions, collection/resume/retention, reports, development and the signing lifecycle |
+| **[Self-contained HTML guide](docs/GroupInventory-Guide.html)** | The same guide, with light/dark themes, navigation and copy buttons; open locally |
+| [Runtime README source](docs/runtime-README.md) | Copied as the package's `README.md`; release use, integrity boundary and contents |
+| [Changelog](CHANGELOG.md) / [Provenance](PROVENANCE.md) | Reviewed change surface and precise limits of provenance claims |
+| [Security](SECURITY.md) | Private vulnerability reporting and responsible disclosure |
+
+## Tests
+
+```powershell
+.\Build-Engine.ps1
+Invoke-Pester -Path .\tests -Output Detailed
 .\tools\Build-Documentation.ps1
-.\tools\New-GroupInventoryPackage.ps1
+.\tools\New-GroupInventoryPackage.ps1 -Stage Prepare -Destination C:\ReviewedArtifacts\M365GroupsReporting-1.0.0
 ```
 
-The source keeps `Invoke-M365GroupsReporting.ps1` and `Get-SiteUrls.ps1` at the root;
-the offline engine sources are under `src`, canonical tests under `tests`, the HTML template under `templates`,
-and packaging/documentation helpers under `tools` and `docs`. Root test files remain compatibility wrappers.
-Development still builds to `engine\bin`; delivery uses `lib\engine` and ships no `bin` directory.
+All tests use synthetic offline data, never tenant credentials or lab runs. CI uses PowerShell 7 on a disposable Windows runner. PowerShell analysis execution and syntax must succeed; analyzer diagnostics and CodeQL findings are advisory. Hosted checks, actual native signatures, raw Git-byte signature verification and owner visual approval remain separate publication gates.
 
-* `-SiteUrlsCsv` is a `GroupId,Url` file (see `Get-SiteUrls.ps1`, interactive SharePoint Admin helper). It is the supported route.
-* `-SpoAdminUrl https://<tenant>-admin.sharepoint.com` keeps the previous interactive behaviour (a new Windows PowerShell 5.1
-  window, `Get-SPOSite -Template GROUP#0`). **It has not been qualified outside a lab.** Its prerequisites (admin URL shape,
-  `powershell.exe`, `Microsoft.Online.SharePoint.PowerShell` module for Windows PowerShell 5.1) are verified before any work and
-  the run fails with an explicit message when one is missing.
-* Authentication: **prefer `Certificate`** with a local RSA private key and its matching public certificate registered
-  to the configured AppId. `ClientSecretFile` (external protected JSON: `TenantId`, `ClientId`, `ClientSecret`) and
-  `ClientSecretEnvironment` are compatibility/lab modes; the default file mode preserves existing deployments.
-  `-ClientSecret` is deprecated and disables transcripts while retaining fixed secret-safe lifecycle diagnostics.
-  Secrets and private keys never reach the engine/package.
+Preparation creates `.publication-pending` and an **unsigned** layout-correct manifest. After the owner signs the exact staged scripts, `-Stage RefreshManifest` hashes those finalized bytes; the owner then signs the manifest. `-Stage Finalize` independently verifies the package before removing the pending marker. No tool signs files, contacts a timestamp service or publishes GitHub content.
 
-## Run folder
+## License
 
-Default: `data\run_<yyyyMMdd_HHmmss>\M365GroupsReporting.sqlite`,
-`reports\run_<stamp>\M365GroupsReporting.csv/html`, and `logs\run_<stamp>\`.
-`Storage.DatabasePath` defines the database filename and snapshot parent directory.
-**Accepted domain difference:** immutable inventories require snapshots instead of Purview's mutable event history.
-`-WorkDir` preserves the legacy combined `<WorkDir>\run_<stamp>\` layout unless output/log paths are overridden.
+[MIT](LICENSE), copyright 2026 Nicolas Fabert. Original bundled components retain their vendor bytes and licenses; see [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).
 
-| File | Content |
-| --- | --- |
-| `M365GroupsReporting.sqlite` (`inventory.sqlite` in legacy WorkDir runs) | durable tenant-data snapshot |
-| `run.log`, `resume_<stamp>.log` | transcripts, retained according to `Logging.RetentionDays` |
-| `M365GroupsReporting.csv` | final CSV (configured `Report.FilePrefix`) |
-| `M365GroupsReporting.html` | final single-file interactive HTML report |
-| `M365GroupsReporting_parts\part_00001.html` ... | optional legacy partitioned layout (`-HtmlPartitioned`) |
-| `_inv_graph_errors.csv` | failures, only when the run is incomplete (no final file then) |
-| `_inv_sites.csv`, `_inv_sp.status`, `sp.log`, `_inv_sp_worker.ps1` | SharePoint intermediates |
+## Disclaimer
 
-After successful export and engine/log closure, retention removes only older validated sealed snapshots.
-The latest completed snapshot, active/locked runs and incomplete/unknown/corrupt snapshots are preserved.
-Logs age independently by each file's timestamp; incomplete-run and locked logs are protected.
-Separate report folders are not automatically deleted. Zero disables the corresponding policy.
+This Script is a Personal project.
+It's provided "AS-IS". It's not an official Microsoft product so no support can be expected from Microsoft.
 
-`_inv_graph.csv` (the former Graph intermediate) no longer exists: the database is the intermediate.
-
-## Parameters (changes)
-
-* `-Format CSV|HTML` only; omitted uses `Report.Formats` (both by default). **JSON/JSONL were removed** together with `-JsonArrayMax`.
-* Explicit config paths: `Storage.DatabasePath`, `Logging.Path`, `Report.OutputPath`; overrides `-DatabasePath -LogPath -OutputPath`.
-* `-AuthMode -CertificateThumbprint` override explicit authentication. Title/company/tenant/environment display,
-  time zone, formats, filename prefix and delimiter are authoritative configuration defaults.
-* `-ConfigPath`, `-ResumeRun <run folder|inventory.sqlite>`, `-OverwriteExport`, `-HtmlPartitioned`, `-HtmlRowsPerPart` (10000), `-HtmlMaxRelations` (25), `-RawCsvValues`, `-NoRetention`: new.
-* `-HtmlMax` (total HTML row cap) was removed: every group is in the interactive report.
-* Unchanged: `-WorkDir -CredFile -TenantId -ClientId -ClientSecret -OutName -ThrottleLimit -SkipMembers -Max -GridView -GridViewMax -SpTimeoutMin -SpoAdminUrl -SiteUrlsCsv`.
-  `-GridView` shows at most `-GridViewMax` rows of the CSV (the CSV is also exported when `-Format HTML`). `-Max N` collects a deliberate sample of N groups.
-
-## How a run works
-
-1. Site URLs (CSV: streamed into the engine first so that a bad file fails early; interactive: a window works in parallel).
-2. Group enumeration (Graph, `$top=999`): one engine transaction per page; the checkpoint (page number, content hash and the next-page cursor) is committed with the page.
-3. Owners/members: `GetWorkBatch` gives the groups that still have a pending, interrupted or failed list; runspace workers call Graph `$batch`,
-   follow `@odata.nextLink`, and write each page through the engine's **single bounded writer**. Memory use does not grow with the tenant size.
-4. `Seal`: exact reconciliation (every group has a complete owners list and, unless `-SkipMembers`, a complete members list; stored rows = declared
-   counts = rows present; no stray rows; enumeration and sites flows complete; stale groups removed; `quick_check` and `foreign_key_check`). Only then the run is sealed (immutable).
-5. Exports of the sealed run, streamed to a temporary name, flushed, verified and moved into place atomically.
-
-### Resume
-
-`-ResumeRun` reopens the database (schema/application/run-id/setting checks, integrity check, SQLite hot-journal recovery), keeps every completed list,
-resets lists that were interrupted mid-way to *pending*, retries *failed* lists, and re-reads only an unfinished enumeration (from its stored cursor; if Graph rejects
-the cursor the enumeration restarts and de-duplicates by id) or an unfinished site source. A sealed run is only re-exported. If you did not pass `-SkipMembers`
-the run keeps the setting it was created with; passing the opposite is refused.
-
-Limit: a list interrupted in the middle is recollected from its first page (the page checkpoints exist in the database, but resuming inside a list is not used).
-
-## Output formats
-
-**CSV** - UTF-8 **with BOM**, CRLF, every field quoted, header + these 12 columns (unchanged):
-`displayName, alias, primarySmtpAddress, groupType, sharePointUrl, visibility, externalDirectoryObjectId, owners, members, ownersCount, membersCount, ownerless`.
-`owners`/`members` are `;`-joined (UPN, else display name, else id) in directory-object-id order; with `-SkipMembers` `members` and `membersCount` are empty
-(not collected, not 0); `groupType` is `Teams`, `SharePoint` (has a site URL) or `Classic`; rows are ordered by group id. Values that a spreadsheet could take for a formula
-(first character `= + - @` or TAB) get a leading apostrophe and are counted in the export result, unless `-RawCsvValues`. Control characters become spaces and unpaired surrogates `U+FFFD` (counted).
-
-**HTML** - self-contained (inline CSS/JavaScript, no external resource, restrictive CSP meta), like PurviewDlpReport:
-`M365GroupsReporting.html` contains all groups as gzip-compressed chunks and provides field-specific filters for name,
-alias, SMTP, type, SharePoint URL, visibility, owner, member, relation counts and ownerless state, plus sorting,
-virtual scrolling, details and filtered CSV export. Full Purview theme variables and neutral components include
-filtered summary, member-count distribution and top-ten group ranking. Relation dictionaries and typed masks
-optimize repeated owner/member filtering. `-HtmlMaxRelations` limits only
-the visible relation preview; complete owner/member lists remain embedded in the compressed data. Use
-`-HtmlPartitioned` only when separate HTML files are explicitly required.
-
-An existing export is never overwritten unless `-OverwriteExport`.
-
-## Engine (engine\)
-
-`Build-Engine.ps1` runs `dotnet build engine\GroupInventory.Engine.csproj` into `engine\bin`. No `PackageReference`: SQLite comes from `lib\sqlite`
-(`Microsoft.Data.Sqlite` 10.0.12, SQLitePCLRaw 2.1.12, natives win-x64/win-arm64). If the .NET 8 targeting pack is not installed the script compiles against the newest
-installed `Microsoft.NETCore.App 8.0.x` runtime instead (nothing is downloaded); it fails with a precise message when there is no SDK or no .NET 8 runtime.
-Rebuild after changing `src`.
-
-* `InventoryEngine.Create / Resume / OpenSealed`; `AddGroupPage`, `AddSitePage`, `AppendListPage`, `FailList`, `FailGroups`, `CompleteFlow`, `MarkFlowFailed`, `ResetFlow`,
-  `GetFlow`, `GetWorkBatch`, `GetFailures`, `Info`, `Reconcile`, `Seal`, `ExportCsv`, `ExportHtml`, `Summary`.
-* A write returns only after the transaction holding it (and its checkpoint) is committed. Same page + same content = replayed (idempotent); same page + other content, or a gap =
-  conflict that fails the flow/list. Duplicates are removed by object id (a different value for the same id fails the list).
-* One writer thread owns the single write connection; producers feed a bounded queue (`QueueCapacity`) and block, then fail with a backpressure error, when it is full;
-  transactions are bounded by rows and time. Bounds per frame: entries, characters per field and per frame. An unexpected writer error faults the engine (restart and resume).
-* SQLite policy, verified after being set: `journal_mode=DELETE` (rollback journal, WAL never), `synchronous=FULL`, `foreign_keys=ON`, `trusted_schema=OFF`, `cell_size_check=ON`,
-  `temp_store=MEMORY`, `mmap_size=0`, `application_id`/`user_version` (schema 1) + metadata/protocol version, `quick_check`/`foreign_key_check` at resume, seal and export,
-  a `<db>.lock` file against a second writer, no `-wal/-shm` sidecar.
-* Exports read through a separate **read-only** connection, require a sealed run whose totals still match, and never keep partial output.
-
-## Tests (offline: no network, no credentials)
-
-```powershell
-Invoke-Pester -Path .\tests\Invoke-M365GroupsReporting.Tests.ps1,.\tests\GroupInventory.Engine.Tests.ps1,.\tests\M365GroupsReporting.Parity.Tests.ps1
-$env:GROUP_INVENTORY_BENCH_OBJECTS = 400000; Invoke-Pester -Path .\tests\GroupInventory.Engine.Tests.ps1
-```
-
-Both files pass with the installed Pester 3.4.0 and 6.1.0. The engine is built on demand if `engine\bin` is missing. Synthetic benchmark on a developer workstation
-(in-process, no Graph latency): 20,000 groups x (2 owners + 17 members) = 400,000 objects, 32 producer threads: write ~21 s, seal ~0.6 s, CSV ~1 s, HTML (20 parts) ~1 s,
-managed heap growth ~13 MB, database ~38 MB.
-
-## Known limits / not done
-
-* Certificate mode was live-qualified on 2026-10-14 with a dedicated registered RSA certificate: a 100-group sample,
-  200 complete owner/member lists, successful reconciliation/seal, CSV and single-file HTML, using the existing
-  SharePoint CSV route. Existing app credentials and consent were preserved. This is not a certificate-mode full-tenant
-  or interactive SharePoint qualification; environment-secret mode remains unqualified live.
-* Packaging is locally validated; no signing, commit, publication or GitHub change is part of this work.
-* Resume restarts an interrupted list from its first page; resuming inside a very large list is not implemented.
-* Windows x64/arm64 only (bundled natives). The database and the exports contain tenant data; this repository must not receive them
-  (`app_creds.json`, `run_*`, `*.sqlite` are listed in `.gitignore`).
+As any scripts you must read carefully the documentation and test it first in a Test environment before any run in Production.
